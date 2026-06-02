@@ -1,0 +1,20 @@
+import { createRouter, createWebHistory } from 'vue-router'
+
+const router = createRouter({
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes: [
+    // Redirection automatique de la racine vers l'inventaire
+    {
+      path: '/',
+      redirect: '/computers'
+    },
+    // Notre route GLPI
+    {
+      path: '/computers',
+      name: 'computers',
+      component: () => import('@/views/computer/ComputersView.vue')
+    }
+  ]
+})
+
+export default router
