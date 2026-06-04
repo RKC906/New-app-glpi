@@ -6,9 +6,14 @@ const router = createRouter({
     // Redirection automatique de la racine vers l'inventaire
     {
       path: '/',
-      redirect: '/computers'
+      redirect: '/accueil'
     },
     // Notre route GLPI
+    {
+      path: '/accueil',
+      name: 'accueil',
+      component: () => import('@/views/Accueil.vue')
+    },
     {
       path: '/computers',
       name: 'computers',
