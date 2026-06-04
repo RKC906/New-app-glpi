@@ -12,8 +12,18 @@ const router = createRouter({
     {
       path: '/computers',
       name: 'computers',
-      component: () => import('@/views/computer/ComputerView.vue')
-    }
+      component: () => import('@/views/computer/ComputerList.vue')
+    },
+    {
+      path: '/computers/create',
+      name: 'computerscreate',
+      component: () => import('@/views/computer/ComputerCreate.vue')
+    },
+    {
+      path: '/computers/edit/:id',
+      name: 'computer-edit',
+      component: () => import('@/views/computer/ComputerEdit.vue')
+    }  
   ]
 })
 
