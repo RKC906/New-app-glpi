@@ -14,6 +14,12 @@ const router = createRouter({
       name: 'computers',
       component: () => import('@/views/computer/ComputerList.vue')
     },
+    // computers avec glpi et locale sqlite
+    {
+      path: '/computerslocale',
+      name: 'computerslocale',
+      component: () => import('@/views/computer/ComputerListeGlpiLocale.vue')
+    },
     {
       path: '/computers/create',
       name: 'computerscreate',
