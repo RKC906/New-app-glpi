@@ -14,13 +14,19 @@
         <tr>
           <th>ID</th>
           <th>Nom</th>
-          <th>Actions</th>
+          <th>Update</th>
+          <th>Delete</th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="computer in computers" :key="computer.id">
           <td>{{ computer.id }}</td>
           <td><strong>{{ computer.name }}</strong></td>
+          <td>
+            <button @click="goToEdit(computer.id)" class="btn-edit">
+                Modifier
+            </button>
+          </td>
           <td>
             <button 
               @click="handleDelete(computer.id, computer.name)" 
@@ -39,6 +45,8 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useComputers } from '@/composables/useComputer'
+import { useRouter } from 'vue-router'
+const router = useRouter()
 
 // 1. On extrait 'delComputer' en plus des autres outils
 const { computers, isLoading, error, fetchComputers, delComputer } = useComputers()
@@ -61,6 +69,11 @@ const handleDelete = async (id, computerName) => {
     }
   }
 }
+
+// 3. Update bouton
+const goToEdit = (id) => {
+  router.push({ name: 'computer-edit', params: { id: id } })
+} 
 </script>
 
 <style scoped>
@@ -89,4 +102,15 @@ const handleDelete = async (id, computerName) => {
 }
 .error { color: #e74c3c; font-weight: bold; }
 .btn-primary { padding: 10px 20px; background-color: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; }
+.btn-edit {
+  background-color: #3618db;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-right: 8px;
+}
+.btn-edit:hover { background-color: #2980b9; }
 </style>

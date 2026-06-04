@@ -16,5 +16,11 @@ export const computerService = {
   //Delete
 deleteComputer(computerId) {
  return api.delete(`/Computer/${computerId}`)
-}
+},
+
+updateComputer(computerData) {
+    return api.put('/Computer', {
+      input: computerData // computerData devra contenir l'id !
+    })
+  }
 }
