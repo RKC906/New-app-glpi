@@ -2,9 +2,20 @@
   <div class="container">
     <h2>Liste des Ordinateurs GLPI</h2>
 
-     <RouterLink to="/computers/create">
-      <button class="btn-primary">Ajouter un Ordinateur</button>
-    </RouterLink>
+    <div class="actions-bar">
+      <RouterLink to="/computers/create">
+        <button class="btn-primary">Ajouter un Ordinateur</button>
+      </RouterLink>
+
+      <div class="search-box">
+        <input 
+          v-model="searchQuery" 
+          type="text" 
+          placeholder="Rechercher par nom ou ID..." 
+          class="search-input"
+        />
+      </div>
+    </div>
     
     <p v-if="isLoading && computers.length === 0">Chargement...</p>
     <p v-if="error" class="error">{{ error }}</p>
@@ -19,7 +30,11 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="computer in computers" :key="computer.id">
+        <tr v-if="filteredComputers.length === 0">
+          <td colspan="4" class="no-result">Aucun ordinateur ne correspond à votre recherche.</td>
+        </tr>
+        
+        <tr v-for="computer in filteredComputers" :key="computer.id">
           <td>{{ computer.id }}</td>
           <td><strong>{{ computer.name }}</strong></td>
           <td>
@@ -43,21 +58,40 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+// 💡 Ajout de 'ref' et 'computed'
+import { onMounted, ref, computed } from 'vue'
 import { useComputers } from '@/composables/useComputer'
 import { useRouter } from 'vue-router'
 const router = useRouter()
 
-// 1. On extrait 'delComputer' en plus des autres outils
 const { computers, isLoading, error, fetchComputers, delComputer } = useComputers()
+
+// 📝 Variable réactive pour stocker la saisie de l'utilisateur
+const searchQuery = ref('')
 
 onMounted(() => {
   fetchComputers()
 })
 
-// 2. La fonction liée au clic du bouton
+// ✨ Propriété calculée pour filtrer la liste dynamiquement
+const filteredComputers = computed(() => {
+  // Si la barre de recherche est vide, on renvoie la liste complète
+  if (!searchQuery.value.trim()) {
+    return computers.value
+  }
+
+  const query = searchQuery.value.toLowerCase().trim()
+
+  return computers.value.filter(computer => {
+    const matchName = computer.name ? computer.name.toLowerCase().includes(query) : false
+    const matchId = computer.id ? computer.id.toString().includes(query) : false
+    
+    // On garde l'ordinateur si le nom OU l'id contient la recherche
+    return matchName || matchId
+  })
+})
+
 const handleDelete = async (id, computerName) => {
-  // Fenêtre de confirmation de sécurité
   const confirmation = confirm(`Êtes-vous sûr de vouloir supprimer l'ordinateur "${computerName}" ?`)
   
   if (confirmation) {
@@ -70,7 +104,6 @@ const handleDelete = async (id, computerName) => {
   }
 }
 
-// 3. Update bouton
 const goToEdit = (id) => {
   router.push({ name: 'computer-edit', params: { id: id } })
 } 
@@ -78,11 +111,39 @@ const goToEdit = (id) => {
 
 <style scoped>
 .container { padding: 20px; font-family: sans-serif; }
-.computer-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+
+/* Nouveau style pour aligner le bouton et la recherche */
+.actions-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 15px;
+}
+
+.search-input {
+  padding: 10px 15px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 250px;
+  font-size: 0.95em;
+}
+.search-input:focus {
+  border-color: #3498db;
+  outline: none;
+}
+
+.no-result {
+  text-align: center;
+  color: #7f8c8d;
+  font-style: italic;
+  padding: 20px !important;
+}
+
+.computer-table { width: 100%; border-collapse: collapse; }
 .computer-table th, .computer-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
 .computer-table th { background-color: #f4f6f7; color: #34495e; }
 
-/* Style du bouton supprimer rouge et propre */
 .btn-delete {
   background-color: #e74c3c;
   color: white;
@@ -93,13 +154,8 @@ const goToEdit = (id) => {
   font-weight: bold;
   transition: background 0.2s;
 }
-.btn-delete:hover {
-  background-color: #c0392b;
-}
-.btn-delete:disabled {
-  background-color: #bdc3c7;
-  cursor: not-allowed;
-}
+.btn-delete:hover { background-color: #c0392b; }
+.btn-delete:disabled { background-color: #bdc3c7; cursor: not-allowed; }
 .error { color: #e74c3c; font-weight: bold; }
 .btn-primary { padding: 10px 20px; background-color: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; }
 .btn-edit {
