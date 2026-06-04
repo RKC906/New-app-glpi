@@ -1,6 +1,10 @@
 <template>
   <div class="page-container">
     <h2>Inventaire des Ordinateurs</h2>
+    
+    <RouterLink to="/computers/create">
+      <button class="btn-primary">Ajouter un Ordinateur</button>
+    </RouterLink>
 
     <div v-if="isLoading" class="state-box">Chargement des données...</div>
     <div v-else-if="error" class="state-box error">{{ error }}</div>
@@ -29,7 +33,6 @@ import ComputerCard from '@/components/computer/ComputerCard.vue'
 const { computers, isLoading, error, fetchComputers } = useComputers()
 
 onMounted(() => {
-  // L'appel fonctionne direct car la session est déjà ouverte par App.vue !
   fetchComputers() 
 })
 </script>
@@ -41,4 +44,5 @@ h2 { color: #2c3e50; margin-bottom: 25px; }
 .state-box.error { color: #c0392b; background: #fdf2e9; border-radius: 4px; }
 .empty-state { text-align: center; padding: 40px; border: 2px dashed #bdc3c7; color: #7f8c8d; }
 .grid-layout { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+.btn-primary { padding: 10px 20px; background-color: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; }
 </style>
