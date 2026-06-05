@@ -47,7 +47,7 @@ const handleSubmit = async () => {
     await addComputer(formData.value)
     alert("Ordinateur ajouté avec succès dans GLPI !")
     // Redirection vers la liste des ordinateurs après le succès
-    router.push('/computers')
+    router.push('/back/computers')
   } catch (err) {
     // L'erreur est déjà gérée dans le composable
   }

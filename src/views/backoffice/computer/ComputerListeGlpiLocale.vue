@@ -68,7 +68,9 @@ const allComputersCombined = computed(() => {
 <template>
   <div class="container">
     <h2>Gestion des Ordinateurs</h2>
-
+        <RouterLink :to="{ name: 'computers' }">
+        <button class="btn-secondary">Retour à la liste</button>
+      </RouterLink>
     <div class="search-box">
       <input 
         v-model="searchQuery" 
@@ -147,4 +149,5 @@ const allComputersCombined = computed(() => {
 .badge.glpi { background-color: #3498db; }
 .badge.local { background-color: #2ecc71; }
 .error { color: #e74c3c; }
+.btn-secondary { padding: 10px 20px; background-color: #7f8c8d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px; }
 </style>

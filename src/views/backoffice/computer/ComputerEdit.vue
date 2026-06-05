@@ -50,14 +50,14 @@ const handleSubmit = async () => {
     // On envoie l'objet entier (qui contient l'id, le name, le serial, etc.)
     await editComputer(formData.value)
     alert("Ordinateur modifié avec succès dans GLPI !")
-    router.push('/computers') // Retour à la liste
+    router.push('/back/computers') // Retour à la liste
   } catch (err) {
     // Erreur gérée par le composable
   }
 }
 
 const cancel = () => {
-  router.push('/computers')
+  router.push('/back/computers')
 }
 </script>
 
