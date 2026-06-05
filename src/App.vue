@@ -6,50 +6,22 @@ import { useAuthStore } from '@/stores/auth'
 const authStore = useAuthStore()
 
 onMounted(async () => {
-  try {
-    const USER_TOKEN = import.meta.env.VITE_GLPI_USER_TOKEN 
-    
-    console.log("⏳ Initialisation de la session GLPI...")
-    await authStore.login(USER_TOKEN)
-    console.log("🚀 Application connectée à GLPI et prête !")
-  } catch (error) {
-    console.error("Impossible de démarrer l'application:", error)
-  }
+  // On initialise la session GLPI "invité" en arrière-plan pour que le Frontoffice 
+  // puisse directement afficher les ordinateurs sans bloquer l'utilisateur.
+  await authStore.initFrontSession()
 })
 </script>
 
 <template>
-  <div v-if="!authStore.isAuthenticated" class="app-loading">
-    <div class="spinner"></div>
-    <p>Connexion sécurisée à GLPI en cours...</p>
-  </div>
-
-  <RouterView v-else />
+  <RouterView />
 </template>
 
 <style>
-/* Un petit style propre pour ton écran de chargement global */
-.app-loading {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
+/* Style global pour l'ensemble de ton application */
+body {
+  margin: 0;
+  padding: 0;
   font-family: sans-serif;
-  color: #2c3e50;
-  background-color: #f8f9fa;
-}
-.spinner {
-  border: 4px solid rgba(0, 0, 0, 0.1);
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border-left-color: #3498db;
-  animation: spin 1s linear infinite;
-  margin-bottom: 15px;
-}
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  background-color: #f5f7fa;
 }
 </style>

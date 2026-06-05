@@ -69,7 +69,7 @@ const handleDirectGlpiReset = async () => {
   isResetting.value = true
 
   // Liste des endpoints de l'API GLPI à nettoyer (respecte bien les majuscules de l'API GLPI)
-  const modulesToReset = ['Computer', 'Peripheral', 'Software']
+  const modulesToReset = ['Computer']
 
   try {
     // On boucle sur nos modules un par un

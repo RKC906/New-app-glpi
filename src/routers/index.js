@@ -1,41 +1,85 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    // Redirection automatique de la racine vers l'inventaire
+    // Redirection automatique
     {
       path: '/',
-      redirect: '/accueil'
+      redirect: '/front/home'
     },
-    // Notre route GLPI
     {
-      path: '/accueil',
+      path: '/front',
+      redirect: '/front/home'
+    },
+    {
+      path: '/back',
+      redirect: '/back/login'
+    },
+
+    //Notre route Frontoffice accessible à tous
+    {
+      path: '/front/home',
+      name: 'home',
+      component: () => import('@/views/frontoffice/Home.vue')
+    },
+
+
+
+
+
+    // Notre route Backoffice protégée
+    {
+      path: '/back/login',
+      name: 'login',
+      component: () => import('@/views/backoffice/Login.vue')
+    },
+    {
+      path: '/back/accueil',
       name: 'accueil',
-      component: () => import('@/views/Accueil.vue')
+      component: () => import('@/views/backoffice/Accueil.vue'),
+      meta: { requiresAuth: true }
     },
     {
-      path: '/computers',
+      path: '/back/computers',
       name: 'computers',
-      component: () => import('@/views/computer/ComputerList.vue')
+      component: () => import('@/views/backoffice/computer/ComputerList.vue'),
+      meta: { requiresAuth: true }
     },
     // computers avec glpi et locale sqlite
     {
-      path: '/computerslocale',
+      path: '/back/computerslocale',
       name: 'computerslocale',
-      component: () => import('@/views/computer/ComputerListeGlpiLocale.vue')
+      component: () => import('@/views/backoffice/computer/ComputerListeGlpiLocale.vue'),
+      meta: { requiresAuth: true }
     },
     {
-      path: '/computers/create',
+      path: '/back/computers/create',
       name: 'computerscreate',
-      component: () => import('@/views/computer/ComputerCreate.vue')
+      component: () => import('@/views/backoffice/computer/ComputerCreate.vue'),
+      meta: { requiresAuth: true }
     },
     {
-      path: '/computers/edit/:id',
+      path: '/back/computers/edit/:id',
       name: 'computer-edit',
-      component: () => import('@/views/computer/ComputerEdit.vue')
+      component: () => import('@/views/backoffice/computer/ComputerEdit.vue'),
+      meta: { requiresAuth: true }
     }  
   ]
+})
+
+router.beforeEach((to, from, next) => {
+  const authStore = useAuthStore()
+
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    console.warn("Accès refusé au Backoffice")
+    next('/back/login')
+  } else if (to.path === '/back/login' && authStore.isAuthenticated) {
+    next('/back/accueil') // Si déjà connecté, on l'envoie sur le dashboard
+  } else {
+    next() // Laisse passer (pour le Front ou si l'admin est connecté)
+  }
 })
 
 export default router

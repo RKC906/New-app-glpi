@@ -2,10 +2,10 @@
   <div class="container">
     <h2>Liste des Ordinateurs GLPI</h2>
 
-     <RouterLink to="/computers/create">
+     <RouterLink to="/back/computers/create">
       <button class="btn-primary">Ajouter un Ordinateur</button>
     </RouterLink>
-     <p><RouterLink to="/computerslocale">
+     <p><RouterLink to="/back/computerslocale">
       <button class="btn-primary">Liste Glpi + Locale</button>
     </RouterLink></p>
     
