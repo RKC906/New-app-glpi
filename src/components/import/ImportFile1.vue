@@ -36,7 +36,7 @@ const handleFileUpload = (event) => {
       try {
         // On boucle sur chaque ligne du CSV pour l'envoyer à notre service
         for (const row of rows) {
-          await importService.importComputerRow(row)
+          await importService.importAssetRow(row)
           currentProgress.value++
         }
         alert("🎉 Félicitations ! Tout le fichier 1 a été importé proprement dans GLPI !")
