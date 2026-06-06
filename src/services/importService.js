@@ -148,27 +148,92 @@ export const importService = {
     return data
   },
 
-  /**
+/**
    * 💰 Importation d'une ligne de Coût de Ticket (Fichier CSV 3)
    */
   async importTicketCostRow(row) {
     console.log(`⏳ Ajout de coût pour le Ticket Numéro : ${row.Num_Ticket}...`)
 
+    // 1. Nettoyage et formatage des données numériques
     const cleanTimeCost = row.Time_Cost ? parseFloat(row.Time_Cost.toString().replace(',', '.')) : 0
     const cleanFixedCost = row.Fixed_Cost ? parseFloat(row.Fixed_Cost) : 0
 
     const costInput = {
       input: {
-        tickets_id: parseInt(row.Num_Ticket),
-        actiontime: parseInt(row.Duration_second) || 0,
+        tickets_id: parseInt(row.Num_Ticket), // Liaison au ticket parent
+        actiontime: parseInt(row.Duration_second) || 0, // Temps en secondes
         cost_time: cleanTimeCost,
         cost_fixed: cleanFixedCost,
-        name: `Coût importé automatiquement`
+        name: `Coût importé automatiquement` // Petit libellé optionnel requis par GLPI
       }
     }
 
+    // 2. Envoi à l'API GLPI sur l'endpoint TicketCost
     const { data } = await api.post('/TicketCost', costInput)
     console.log(`✅ Ligne de coût ajoutée avec succès (ID Coût GLPI: ${data.id})`)
+    
     return data
+  },
+
+  /**
+   * 🖼️ Étape A : Envoyer l'image brute à GLPI pour créer un "Document"
+   * @param {Blob} fileBlob - Le fichier image binaire extrait du ZIP
+   * @param {string} fileName - Le nom du fichier (ex: PC-ADM-001.png)
+   */
+  async uploadImageAsDocument(fileBlob, fileName) {
+    console.log(`⏳ Téléversement de l'image : ${fileName}...`)
+
+    // Pour envoyer un fichier binaire via Axios, on utilise obligatoirement FormData
+    const formData = new FormData()
+    
+    // Structure obligatoire attendue par l'API GLPI pour les documents
+    formData.append('uploadManifest', JSON.stringify({
+      input: {
+        name: `Photo ${fileName.split('.')[0]}`, // Libellé du document dans GLPI
+        filename: fileName
+      }
+    }))
+    formData.append('filename[]', fileBlob, fileName)
+
+    // Envoi du POST multipart vers l'endpoint /Document
+    const { data } = await api.post('/Document', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+
+    return data.id // On retourne l'ID du document créé (ex: 78)
+  },
+
+  /**
+   * ⛓️ Étape B : Lier le Document à la bonne machine (Computer ou Monitor)
+   * @param {string} imageName - Le nom de l'image sans extension (ex: "MN-FORM-002")
+   * @param {Blob} fileBlob - Le fichier image binaire
+   * @param {string} fullFileName - Le nom complet (ex: "MN-FORM-002.png")
+   */
+  async importImageLink(imageName, fileBlob, fullFileName) {
+    // 1. Détection dynamique du type de matériel (comme pour les tickets)
+    const type = imageName.startsWith('MN-') ? 'Monitor' : 'Computer'
+
+    // 2. Recherche de la machine dans GLPI pour récupérer son ID numérique
+    const searchRes = await api.get(`/${type}`, { params: { searchText: imageName } })
+    const item = searchRes.data.find(i => i.name === imageName)
+
+    if (!item) {
+      console.warn(`⚠️ Impossible d'importer l'image : Le matériel "${imageName}" n'existe pas dans GLPI (Table ${type}).`)
+      return
+    }
+
+    // 3. Téléversement de la photo et récupération de l'ID du document
+    const documentId = await this.uploadImageAsDocument(fileBlob, fullFileName)
+
+    // 4. Création de la liaison dans la table intermédiaire Document_Item
+    await api.post('/Document_Item', {
+      input: {
+        documents_id: documentId,
+        itemtype: type,
+        items_id: item.id
+      }
+    })
+
+    console.log(`✅ Image ${fullFileName} associée avec succès au matériel [${type}] (ID: ${item.id})`)
   }
 }
