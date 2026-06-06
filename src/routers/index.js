@@ -24,6 +24,11 @@ const router = createRouter({
       name: 'home',
       component: () => import('@/views/frontoffice/Home.vue')
     },
+    {
+      path: '/front/ticketcreate',
+      name: 'createticket',
+      component: () => import('@/views/frontoffice/tickets/CreateTicket.vue')
+    },
 
 
 

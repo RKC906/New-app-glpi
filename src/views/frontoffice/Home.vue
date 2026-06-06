@@ -1,4 +1,9 @@
 <template>
+    <div>
+    <RouterLink :to="{ name: 'createticket' }">
+        <button class="btn-secondary">creer ticket</button>
+    </RouterLink><
+    </div>
   <div class="inventory-container">
     <div class="inventory-header">
       <h2>🔌 Inventaire Général du Parc Informatique</h2>
@@ -94,6 +99,7 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useListeMateriel } from '@/composables/useListeMateriel'
+import { RouterLink } from 'vue-router'
 
 // Extraction de la configuration déportée du composable
 const {
