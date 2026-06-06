@@ -42,6 +42,18 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/back/dashboard',
+      name: 'dashboard',
+      component: () => import('@/views/backoffice/Dashboard.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/back/tickets',
+      name: 'tickets',
+      component: () => import('@/views/backoffice/tickets/TicketsManager.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/back/computers',
       name: 'computers',
       component: () => import('@/views/backoffice/computer/ComputerList.vue'),
