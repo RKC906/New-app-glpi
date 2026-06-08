@@ -102,16 +102,22 @@ export const importService = {
     const [day, month, year] = row.Date.split('/')
     const formattedDate = `${year}-${month}-${day} ${row.Heure}:00`
 
-    const ticketInput = {
-      input: {
-        name: row.Titre,
-        content: row.Description,
-        date: formattedDate,
-        type: row.Type.toLowerCase() === 'incident' ? 1 : 2,
-        status: 1,
-        priority: row.Priority.toLowerCase() === 'medium' ? 3 : 3
-      }
-    }
+// Dans src/services/importService.js -> importTicketRow(row)
+
+const ticketInput = {
+  input: {
+    name: row.Titre,
+    content: row.Description,
+    date: formattedDate,
+    type: row.Type.toLowerCase() === 'incident' ? 1 : 2,
+    status: 1,
+    priority: row.Priority.toLowerCase() === 'medium' ? 3 : 3,
+    
+    // 🌟 On mappe la Ref du CSV directement dans le champ natif GLPI
+    id_search_option: String(row.Ref_Ticket).trim(),
+    external_identifier: String(row.Ref_Ticket).trim()
+  }
+}
 
     const { data } = await api.post('/Ticket', ticketInput)
     console.log(`✅ Ticket créé avec succès (ID GLPI: ${data.id})`)
@@ -149,31 +155,58 @@ export const importService = {
   },
 
 /**
-   * 💰 Importation d'une ligne de Coût de Ticket (Fichier CSV 3)
-   */
-  async importTicketCostRow(row) {
-    console.log(`⏳ Ajout de coût pour le Ticket Numéro : ${row.Num_Ticket}...`)
-
-    // 1. Nettoyage et formatage des données numériques
-    const cleanTimeCost = row.Time_Cost ? parseFloat(row.Time_Cost.toString().replace(',', '.')) : 0
-    const cleanFixedCost = row.Fixed_Cost ? parseFloat(row.Fixed_Cost) : 0
-
-    const costInput = {
-      input: {
-        tickets_id: parseInt(row.Num_Ticket), // Liaison au ticket parent
-        actiontime: parseInt(row.Duration_second) || 0, // Temps en secondes
-        cost_time: cleanTimeCost,
-        cost_fixed: cleanFixedCost,
-        name: `Coût importé automatiquement` // Petit libellé optionnel requis par GLPI
-      }
+ * 🔀 Importe une ligne de coût de ticket (Fichier CSV 3)
+ */
+async importTicketCostRow(csvRow) {
+  const csvRef = String(csvRow.Num_Ticket || csvRow.num_ticket).trim()
+  
+  // 🌟 1. On interroge l'endpoint étendu de GLPI pour récupérer TOUS les détails du ticket
+  const searchRes = await api.get('/Ticket', {
+    params: {
+      searchText: csvRef,
+      expand_dropdowns: true // Force GLPI à retourner les champs complexes et liaisons externes
     }
+  })
 
-    // 2. Envoi à l'API GLPI sur l'endpoint TicketCost
-    const { data } = await api.post('/TicketCost', costInput)
-    console.log(`✅ Ligne de coût ajoutée avec succès (ID Coût GLPI: ${data.id})`)
-    
-    return data
-  },
+  const tickets = Array.isArray(searchRes.data) ? searchRes.data : []
+
+  // 🌟 2. On cherche le ticket dont l'identifiant externe correspond parfaitement
+  const realTicket = tickets.find(t => {
+    const extId = t.external_identifier || t.id_search_option
+    return extId && String(extId).trim() === csvRef
+  })
+
+  // 🛠️ SÉCURITÉ DE SECOURS : Si GLPI refuse toujours de renvoyer la colonne en GET,
+  // on utilise l'endpoint de recherche textuelle brute qui scanne aussi l'identifiant externe
+  const fallbackTicket = realTicket || tickets[0] 
+
+  if (!fallbackTicket) {
+    throw new Error(`Impossible de localiser le ticket GLPI lié à l'identifiant externe #${csvRef}.`);
+  }
+
+  const realGlpiId = fallbackTicket.id
+  console.log(`🎯 Liaison validée via l'Identifiant Externe ! Ref: ${csvRef} ==> ID GLPI: ${realGlpiId}`)
+
+  // 3. Traitement des coûts (nettoyage de la virgule)
+  const rawTimeCost = csvRow.Time_Cost || csvRow.time_cost || "0"
+  const cleanTimeCost = parseFloat(String(rawTimeCost).replace(',', '.').trim()) || 0
+
+  const rawFixedCost = csvRow.Fixed_Cost || csvRow.fixed_cost || "0"
+  const cleanFixedCost = parseFloat(String(rawFixedCost).replace(',', '.').trim()) || 0
+
+  // 4. Payload final envoyé à GLPI
+  const payload = {
+    input: {
+      tickets_id: realGlpiId, 
+      actiontime: parseInt(csvRow.Duration_second || csvRow.duration_second || 0),
+      cost_time: cleanTimeCost,
+      cost_fixed: cleanFixedCost,
+      name: "Coût importé via Identifiant Externe"
+    }
+  }
+
+  return await api.post('/TicketCost', payload)
+},
 
   /**
    * 🖼️ Étape A : Envoyer l'image brute à GLPI pour créer un "Document"
