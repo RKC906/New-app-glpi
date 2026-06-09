@@ -8,7 +8,9 @@
      <p><RouterLink to="/back/computerslocale">
       <button class="btn-primary">Liste Glpi + Locale</button>
     </RouterLink></p>
-    
+        <RouterLink :to="{ name: 'accueil' }">
+    <button class="btn-secondary">Retour à l'accueil</button>
+    </RouterLink>
     <p v-if="isLoading && computers.length === 0">Chargement...</p>
     <p v-if="error" class="error">{{ error }}</p>
 
@@ -116,4 +118,6 @@ const goToEdit = (id) => {
   margin-right: 8px;
 }
 .btn-edit:hover { background-color: #2980b9; }
+.btn-secondary { padding: 10px 20px; background-color: #7f8c8d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px; }
+
 </style>

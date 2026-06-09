@@ -24,6 +24,11 @@ const router = createRouter({
       name: 'home',
       component: () => import('@/views/frontoffice/Home.vue')
     },
+    {
+      path: '/front/ticketcreate',
+      name: 'createticket',
+      component: () => import('@/views/frontoffice/tickets/CreateTicket.vue')
+    },
 
 
 
@@ -39,6 +44,18 @@ const router = createRouter({
       path: '/back/accueil',
       name: 'accueil',
       component: () => import('@/views/backoffice/Accueil.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/back/dashboard',
+      name: 'dashboard',
+      component: () => import('@/views/backoffice/Dashboard.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/back/tickets',
+      name: 'tickets',
+      component: () => import('@/views/backoffice/tickets/TicketsManager.vue'),
       meta: { requiresAuth: true }
     },
     {

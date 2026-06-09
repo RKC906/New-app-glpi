@@ -19,7 +19,7 @@ const handleLogout = () => {
     
     // 3. On redirige l'utilisateur vers la page d'accueil publique (Frontoffice)
     // Tu peux aussi mettre '/login' si tu préfères le renvoyer sur le formulaire
-    router.push('/') 
+    router.push('/back') 
     
     console.log("🔒 Déconnexion réussie. Retour au Frontoffice.")
   }

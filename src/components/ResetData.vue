@@ -1,7 +1,7 @@
 <template>
   <div class="danger-zone">
     <h3>⚠️ Zone de Danger - Administration API Directe</h3>
-    <p>Cette action videra les modules GLPI sélectionnés (Computers, Peripherals, Softwares) directement depuis ton navigateur.</p>
+    <p>Cette action videra l'intégralité des données importées (Coûts, Tickets, Éléments du Parc Multi-modules) directement depuis ton navigateur.</p>
     
     <div class="reset-box">
       <button 
@@ -9,7 +9,7 @@
         :disabled="isResetting"
         class="btn-danger"
       >
-        {{ isResetting ? 'Purge en cours...' : 'Lancer la purge GLPI' }}
+        {{ isResetting ? 'Purge globale en cours...' : 'Lancer la purge complète' }}
       </button>
     </div>
   </div>
@@ -17,45 +17,54 @@
 
 <script setup>
 import { ref } from 'vue'
-import api from '@/services/api' // 🔌 On utilise ton instance Axios configurée
+import api from '@/services/api' // 🔌 Instance Axios configurée
 import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()
 const isResetting = ref(false)
 
-// 🎯 Fonction générique pour vider un endpoint GLPI
+/**
+ * 🎯 Fonction générique pour vider un endpoint GLPI
+ */
 const clearGlpiModule = async (endpoint) => {
   console.log(`⏳ Récupération des éléments pour : ${endpoint}...`)
   
-  // 1. On liste les éléments existants (grâce à api.js, le Session-Token et l'app_token sont ajoutés tout seuls !)
-  const response = await api.get(`/${endpoint}`, {
-    params: {
-      'range': '0-9999' // On demande une large plage pour tout attraper
-    }
-  })
-
-  const items = response.data
-
-  if (!Array.isArray(items) || items.length === 0) {
-    console.log(`✨ Le module ${endpoint} est déjà vide.`)
-    return
-  }
-
-  console.log(`🗑️ ${items.length} éléments trouvés dans ${endpoint}. Début de la suppression...`)
-
-  // 2. On boucle et on purge
-  for (const item of items) {
-    // force_purge=true supprime définitivement sans passer par la corbeille GLPI
-    await api.delete(`/${endpoint}/${item.id}`, {
+  try {
+    // 1. On liste les éléments existants
+    const response = await api.get(`/${endpoint}`, {
       params: {
-        'force_purge': true
+        'range': '0-9999' // Large plage pour tout attraper
       }
     })
-    console.log(`✅ [${endpoint}] ID ${item.id} supprimé.`);
+
+    const items = response.data
+
+    if (!Array.isArray(items) || items.length === 0) {
+      console.log(`✨ Le module ${endpoint} est déjà vide.`)
+      return
+    }
+
+    console.log(`🗑️ ${items.length} éléments trouvés dans ${endpoint}. Début de la suppression...`)
+
+    // 2. On boucle et on purge définitivement
+    for (const item of items) {
+      // force_purge=true supprime sans passer par la corbeille GLPI
+      await api.delete(`/${endpoint}/${item.id}`, {
+        params: {
+          'force_purge': true
+        }
+      })
+      console.log(`✅ [${endpoint}] ID ${item.id} supprimé de la base.`)
+    }
+  } catch (error) {
+    // On capture les erreurs pour éviter de bloquer la suite de la boucle des modules
+    console.error(`⚠️ Impossible de nettoyer entièrement le module : ${endpoint}`, error)
   }
 }
 
-// 🚀 Fonction principale déclenchée par le bouton
+/**
+ * 🚀 Fonction principale déclenchée par le bouton
+ */
 const handleDirectGlpiReset = async () => {
   // Vérification de sécurité de la session
   if (!authStore.isAuthenticated || !authStore.sessionToken) {
@@ -63,28 +72,46 @@ const handleDirectGlpiReset = async () => {
     return
   }
 
-  const firstCheck = confirm("ATTENTION ! Tu t'apprêtes à supprimer définitivement TOUT le parc informatique de GLPI. Es-tu sûr ?")
+  const firstCheck = confirm("🚨 ATTENTION ATTENTION ! Tu t'apprêtes à supprimer définitivement TOUTES les données importées des 3 fichiers (Coûts, Tickets, et l'intégralité du Parc Informatique). Continuer ?")
   if (!firstCheck) return
+
+  const secondCheck = confirm("⚠️ DERNIER AVERTISSEMENT : Cette opération est irréversible et détruira les liaisons en base de données. Es-tu absolument sûr ?")
+  if (!secondCheck) return
 
   isResetting.value = true
 
-  // Liste des endpoints de l'API GLPI à nettoyer (respecte bien les majuscules de l'API GLPI)
-  const modulesToReset = ['Computer']
+  // 📋 Liste ordonnée des modules à nettoyer (De la fin vers le début pour respecter l'intégrité de la BDD)
+  const modulesToReset = [
+    // 1. On supprime d'abord le Fichier 3 (Les coûts)
+    'TicketCost',
+    
+    // 2. On rompt les liaisons matérielles-tickets du Fichier 2 avant de supprimer les tickets
+    'Item_Ticket', 
+    'Ticket',
+    
+    // 3. On nettoie TOUS les modules potentiels du Parc du Fichier 1 (S'adapte à ton Item_type)
+    'Computer',
+    'Monitor',
+    'Peripheral',
+    'Printer',
+    'Software',
+    'NetworkEquipment'
+  ]
 
   try {
-    // On boucle sur nos modules un par un
+    // Exécution séquentielle du nettoyage
     for (const moduleName of modulesToReset) {
       await clearGlpiModule(moduleName)
     }
 
-    alert("La purge complète via l'API GLPI est terminée !");
+    alert("🎉 La purge complète et ordonnée de la base GLPI est terminée !");
     
-    // On recharge l'application pour rafraîchir tous les tableaux à l'écran
+    // On recharge la page pour rafraîchir l'affichage global
     window.location.reload()
 
   } catch (error) {
-    console.error("La suppression a échoué :", error)
-    alert("Une erreur est survenue. Vérifie tes droits GLPI ou la console de ton navigateur (CORS).")
+    console.error("La suppression générale a échoué :", error)
+    alert("Une erreur est survenue pendant la purge globale. Vérifie tes privilèges admin GLPI.")
   } finally {
     isResetting.value = false
   }
@@ -110,6 +137,10 @@ const handleDirectGlpiReset = async () => {
   border-radius: 4px;
   cursor: pointer;
   font-weight: bold;
+  transition: background 0.2s;
+}
+.btn-danger:hover {
+  background-color: #c0392b;
 }
 .btn-danger:disabled {
   background-color: #95a5a6;
