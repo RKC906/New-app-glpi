@@ -96,6 +96,24 @@ export function useTicketsManager() {
     return statuts[statusId] || 'Inconnu'
   }
 
+  /**
+   * 🔀 Met à jour le statut d'un ticket dans GLPI (Utile pour le Kanban)
+   */
+  const updateTicketStatus = async (ticketId, newStatusId) => {
+    try {
+      await api.put(`/Ticket/${ticketId}`, {
+        input: {
+          id: ticketId,
+          status: newStatusId
+        }
+      })
+      console.log(`✅ Statut du ticket #${ticketId} synchronisé sur GLPI (${newStatusId})`)
+    } catch (error) {
+      console.error(`❌ Échec de la mise à jour du statut pour le ticket #${ticketId}:`, error)
+      throw error // On propage l'erreur pour que le composant puisse annuler le mouvement visuel
+    }
+  }
+
   return {
     isLoading,
     isLoadingDetails,
@@ -108,6 +126,7 @@ export function useTicketsManager() {
     selectTicket,
     formatDate,
     formatDuration,
-    getStatusLabel
+    getStatusLabel,
+    updateTicketStatus
   }
 }
