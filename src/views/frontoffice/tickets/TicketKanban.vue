@@ -21,12 +21,12 @@
         <div class="column-header" :style="{ borderTopColor: column.color, backgroundColor: column.bg }">
           <h3 :style="{ color: column.textColor }">{{ column.title }}</h3>
           <span class="ticket-count" :style="{ backgroundColor: column.badgeBg, color: column.textColor }">
-            {{ getTicketsByStatus(column.id).length }}
+            {{ boardLists[column.id]?.length || 0 }}
           </span>
         </div>
 
         <draggable
-          :list="getTicketsByStatus(column.id)"
+          v-model="boardLists[column.id]"
           group="tickets"
           item-key="id"
           class="column-cards-zone"
@@ -34,7 +34,7 @@
           @change="(evt) => handleCardMove(evt, column.id)"
         >
           <template #item="{ element }">
-            <div class="ticket-card" @click="selectTicket(element)">
+            <div class="ticket-card" :key="element.id" @click="selectTicket(element)">
               
               <div class="card-header-tags">
                 <span class="ticket-id">#{{ element.id }}</span>
@@ -66,43 +66,55 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, reactive, watch } from 'vue'
 import draggable from 'vuedraggable'
-import { useTicketsManager } from '@/composables/useTicketsManager' // Ajuste le chemin selon ton projet
+import { useTicketsManager } from '@/composables/useTicketsManager'
 
-// Extraction des outils de ton composable existant
+// Extraction des outils du composable existant
 const { tickets, isLoading, loadTickets, updateTicketStatus, selectTicket } = useTicketsManager()
 
-// Configuration Palette SaaS Pro validée
+// Configuration stricte à 3 colonnes
 const columnsConfig = [
   { id: 1, title: 'Nouveau', color: '#0ea5e9', bg: '#f0f9ff', textColor: '#0369a1', badgeBg: 'rgba(14, 165, 233, 0.15)' },
-  { id: 2, title: 'En Cours (Ass)', color: '#f59e0b', bg: '#fffaf0', textColor: '#b45309', badgeBg: 'rgba(245, 158, 11, 0.15)' },
-  { id: 4, title: 'En Attente', color: '#94a3b8', bg: '#f8fafc', textColor: '#475569', badgeBg: 'rgba(148, 163, 184, 0.15)' },
+  { id: 2, title: 'En Cours', color: '#f59e0b', bg: '#fffaf0', textColor: '#b45309', badgeBg: 'rgba(245, 158, 11, 0.15)' },
   { id: 5, title: 'Résolu', color: '#10b981', bg: '#f0fdf4', textColor: '#15803d', badgeBg: 'rgba(16, 185, 129, 0.15)' }
 ]
 
-/**
- * 🔍 Filtre dynamiquement la liste de tes tickets réactifs pour chaque colonne
- */
-const getTicketsByStatus = (statusId) => {
-  return tickets.value.filter(ticket => parseInt(ticket.status) === statusId)
-}
+// Objet réactif qui sert de source de vérité locale pour les colonnes vuedraggable
+const boardLists = reactive({
+  1: [],
+  2: [],
+  5: []
+})
 
 /**
- * 🔀 Intercepte le lâcher de souris et applique la mise à jour GLPI
+ * Répartit les tickets du composable global dans nos 3 listes locales
+ */
+const dispatchTicketsToBoard = () => {
+  boardLists[1] = tickets.value.filter(t => parseInt(t.status) === 1)
+  boardLists[2] = tickets.value.filter(t => parseInt(t.status) === 2 || parseInt(t.status) === 3) // Prend en cours + planifié si besoin
+  boardLists[5] = tickets.value.filter(t => parseInt(t.status) === 5 || parseInt(t.status) === 6) // Prend résolu + clos si besoin
+}
+
+// Observe les changements du tableau de tickets global (chargement initial ou refresh)
+watch(tickets, () => {
+  dispatchTicketsToBoard()
+}, { deep: true })
+
+/**
+ * 🔀 Intercepte le mouvement et applique la modification d'état sur l'API GLPI
  */
 const handleCardMove = async (event, targetStatusId) => {
-  if (!event.added) return // On écoute uniquement la colonne qui reçoit la carte
+  if (!event.added) return // On cible uniquement la liste qui reçoit le ticket
 
   const targetTicket = event.added.element
   
   try {
-    // Appel de la nouvelle méthode de ton composable !
+    // Exécute la mise à jour à travers le composable
     await updateTicketStatus(targetTicket.id, targetStatusId)
-    // On force la mise à jour locale de la propriété status pour éviter les sauts visuels
-    targetTicket.status = targetStatusId
+    targetTicket.status = targetStatusId // Évite les désynchronisations visuelles
   } catch (error) {
-    // Si l'API GLPI échoue (Ex: Token expiré, droits insuffisants), on rafraîchit pour annuler le déplacement
+    // Rollback automatique en cas d'erreur réseau / droits GLPI
     refreshBoard()
   }
 }
@@ -112,7 +124,7 @@ const refreshBoard = () => {
 }
 
 onMounted(() => {
-  loadTickets() // Utilise directement ta méthode existante qui interroge dashboardService.getTicketsList()
+  loadTickets()
 })
 </script>
 
@@ -125,8 +137,9 @@ onMounted(() => {
 .refresh-btn { padding: 10px 18px; background: #1e293b; color: #ffffff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
 .refresh-btn:hover { background: #334155; }
 
+/* Parfaitement équilibré pour 3 colonnes à parts égales */
 .kanban-board { display: flex; gap: 24px; align-items: flex-start; overflow-x: auto; padding-bottom: 20px; }
-.kanban-column { flex: 1; min-width: 300px; background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; max-height: 80vh; overflow: hidden; }
+.kanban-column { flex: 1; min-width: 320px; background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; max-height: 80vh; overflow: hidden; }
 
 .column-header { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-top: 4px solid #ccc; }
 .column-header h3 { margin: 0; font-size: 1.05rem; font-weight: 700; }
@@ -140,7 +153,7 @@ onMounted(() => {
 .card-header-tags { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .ticket-id { font-size: 0.8rem; font-weight: 700; color: #94a3b8; }
 .priority-tag { padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; background: #e2e8f0; color: #475569; }
-.prio-4, .prio-5 { background: #fee2e2; color: #dc2626; } /* Gestion rouge pour tickets urgents */
+.prio-4, .prio-5 { background: #fee2e2; color: #dc2626; }
 
 .card-title { margin: 0 0 12px 0; font-size: 0.95rem; color: #334155; font-weight: 600; line-height: 1.5; }
 .card-footer { font-size: 0.8rem; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 10px; }

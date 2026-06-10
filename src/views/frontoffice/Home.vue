@@ -4,6 +4,12 @@
         <button class="btn-secondary">creer ticket</button>
     </RouterLink><
     </div>
+    <div>
+      <RouterLink :to="{ name: 'ticketkanban' }">
+          <button class="btn-secondary">Voir le kanban</button>
+      </RouterLink>
+    </div>
+    
   <div class="inventory-container">
     <div class="inventory-header">
       <h2>🔌 Inventaire Général du Parc Informatique</h2>
