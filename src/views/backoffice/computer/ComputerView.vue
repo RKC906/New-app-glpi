@@ -1,28 +1,28 @@
 <template>
-  <div class="page-container">
-    <h2>Inventaire des Ordinateurs</h2>
-    
-    <RouterLink to="/computers/create">
-      <button class="btn-primary">Ajouter un Ordinateur</button>
-    </RouterLink>
+ <div class="page-container">
+ <h2>Inventaire des Ordinateurs</h2>
+ 
+ <RouterLink to="/computers/create">
+ <button class="btn-primary">Ajouter un Ordinateur</button>
+ </RouterLink>
 
-    <div v-if="isLoading" class="state-box">Chargement des données...</div>
-    <div v-else-if="error" class="state-box error">{{ error }}</div>
-    
-    <div v-else>
-      <div v-if="computers.length === 0" class="empty-state">
-        <p>Aucun ordinateur trouvé dans votre base GLPI.</p>
-      </div>
+ <div v-if="isLoading" class="state-box">Chargement des données...</div>
+ <div v-else-if="error" class="state-box error">{{ error }}</div>
+ 
+ <div v-else>
+ <div v-if="computers.length === 0" class="empty-state">
+ <p>Aucun ordinateur trouvé dans votre base GLPI.</p>
+ </div>
 
-      <div v-else class="grid-layout">
-        <ComputerCard 
-          v-for="item in computers" 
-          :key="item.id" 
-          :computer="item" 
-        />
-      </div>
-    </div>
-  </div>
+ <div v-else class="grid-layout">
+ <ComputerCard 
+ v-for="item in computers" 
+ :key="item.id" 
+ :computer="item" 
+ />
+ </div>
+ </div>
+ </div>
 </template>
 
 <script setup>
@@ -33,7 +33,7 @@ import ComputerCard from '@/components/computer/ComputerCard.vue'
 const { computers, isLoading, error, fetchComputers } = useComputers()
 
 onMounted(() => {
-  fetchComputers() 
+ fetchComputers() 
 })
 </script>
 

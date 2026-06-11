@@ -1,42 +1,42 @@
 <template>
-  <div class="import-container">
-    <div class="import-card">
-      <div class="card-header">
-        <span class="icon">💰</span>
-        <h3>Importation du Fichier 3 - Coûts & Facturation</h3>
-      </div>
-      
-      <p class="description">
-        Téléversez le fichier CSV contenant les coûts fixes et temporels des interventions. Ces données seront directement rattachées à l'historique financier de vos tickets GLPI.
-      </p>
+ <div class="import-container">
+ <div class="import-card">
+ <div class="card-header">
+ <span class="icon"></span>
+ <h3>Importation du Fichier 3 - Coûts & Facturation</h3>
+ </div>
+ 
+ <p class="description">
+ Téléversez le fichier CSV contenant les coûts fixes et temporels des interventions. Ces données seront directement rattachées à l'historique financier de vos tickets GLPI.
+ </p>
 
-      <div class="file-zone" :class="{ 'disabled': isImporting }">
-        <input 
-          type="file" 
-          id="csv-cost-file" 
-          accept=".csv" 
-          @change="handleFileUpload" 
-          :disabled="isImporting" 
-        />
-        <label for="csv-cost-file" class="file-label">
-          {{ isImporting ? 'Importation en cours...' : 'Choisir le fichier des coûts' }}
-        </label>
-      </div>
+ <div class="file-zone" :class="{ 'disabled': isImporting }">
+ <input 
+ type="file" 
+ id="csv-cost-file" 
+ accept=".csv" 
+ @change="handleFileUpload" 
+ :disabled="isImporting" 
+ />
+ <label for="csv-cost-file" class="file-label">
+ {{ isImporting ? 'Importation en cours...' : 'Choisir le fichier des coûts' }}
+ </label>
+ </div>
 
-      <div v-if="isImporting" class="progress-section">
-        <div class="progress-text">
-          Lignes traitées : <strong>{{ currentProgress }}</strong> / <strong>{{ totalRows }}</strong>
-        </div>
-        <div class="progress-bar-container">
-          <div class="progress-bar" :style="{ width: progressPercentage + '%' }"></div>
-        </div>
-      </div>
+ <div v-if="isImporting" class="progress-section">
+ <div class="progress-text">
+ Lignes traitées : <strong>{{ currentProgress }}</strong> / <strong>{{ totalRows }}</strong>
+ </div>
+ <div class="progress-bar-container">
+ <div class="progress-bar" :style="{ width: progressPercentage + '%' }"></div>
+ </div>
+ </div>
 
-      <div v-if="importSuccess" class="success-message">
-        🎉 Tous les coûts ont été associés et injectés avec succès dans GLPI !
-      </div>
-    </div>
-  </div>
+ <div v-if="importSuccess" class="success-message">
+ Tous les coûts ont été associés et injectés avec succès dans GLPI !
+ </div>
+ </div>
+ </div>
 </template>
 
 <script setup>
@@ -50,40 +50,40 @@ const currentProgress = ref(0)
 const totalRows = ref(0)
 
 const progressPercentage = computed(() => {
-  return totalRows.value === 0 ? 0 : Math.round((currentProgress.value / totalRows.value) * 100)
+ return totalRows.value === 0 ? 0 : Math.round((currentProgress.value / totalRows.value) * 100)
 })
 
 const handleFileUpload = (event) => {
-  const file = event.target.files[0]
-  if (!file) return
+ const file = event.target.files[0]
+ if (!file) return
 
-  isImporting.value = true
-  importSuccess.value = false
-  totalRows.value = 0
-  currentProgress.value = 0
+ isImporting.value = true
+ importSuccess.value = false
+ totalRows.value = 0
+ currentProgress.value = 0
 
-  Papa.parse(file, {
-    header: true,
-    skipEmptyLines: true,
-    complete: async (results) => {
-      const rows = results.data
-      totalRows.value = rows.length
+ Papa.parse(file, {
+ header: true,
+ skipEmptyLines: true,
+ complete: async (results) => {
+ const rows = results.data
+ totalRows.value = rows.length
 
-      try {
-        for (const row of rows) {
-          await importService.importTicketCostRow(row)
-          currentProgress.value++
-        }
-        importSuccess.value = true
-      } catch (error) {
-        console.error(error)
-        alert("Erreur lors de l'intégration des coûts. Vérifiez la console.")
-      } finally {
-        isImporting.value = false
-        event.target.value = ''
-      }
-    }
-  })
+ try {
+ for (const row of rows) {
+ await importService.importTicketCostRow(row)
+ currentProgress.value++
+ }
+ importSuccess.value = true
+ } catch (error) {
+ console.error(error)
+ alert("Erreur lors de l'intégration des coûts. Vérifiez la console.")
+ } finally {
+ isImporting.value = false
+ event.target.value = ''
+ }
+ }
+ })
 }
 </script>
 

@@ -1,86 +1,86 @@
 <template>
-  <div class="dashboard-container">
-    <div class="dashboard-header">
-      <h2>📊 Tableau de Bord GLPI</h2>
-      <button @click="refreshDashboard" :disabled="isLoading" class="btn-refresh">
-        {{ isLoading ? 'Mise à jour...' : '🔄 Actualiser' }}
-      </button>
-    </div>
+ <div class="dashboard-container">
+ <div class="dashboard-header">
+ <h2> Tableau de Bord GLPI</h2>
+ <button @click="refreshDashboard" :disabled="isLoading" class="btn-refresh">
+ {{ isLoading ? 'Mise à jour...' : ' Actualiser' }}
+ </button>
+ </div>
 
-    <div class="kpi-grid">
-      <div class="kpi-card purple">
-        <div class="kpi-icon">📦</div>
-        <div class="kpi-info">
-          <h3>Total Équipements</h3>
-          <p class="kpi-value">{{ stats.totalAssets }}</p>
-        </div>
-      </div>
+ <div class="kpi-grid">
+ <div class="kpi-card purple">
+ <div class="kpi-icon"></div>
+ <div class="kpi-info">
+ <h3>Total Équipements</h3>
+ <p class="kpi-value">{{ stats.totalAssets }}</p>
+ </div>
+ </div>
 
-      <div class="kpi-card blue">
-        <div class="kpi-icon">🎫</div>
-        <div class="kpi-info">
-          <h3>Tickets Globaux</h3>
-          <p class="kpi-value">{{ stats.totalTickets }}</p>
-        </div>
-      </div>
+ <div class="kpi-card blue">
+ <div class="kpi-icon"></div>
+ <div class="kpi-info">
+ <h3>Tickets Globaux</h3>
+ <p class="kpi-value">{{ stats.totalTickets }}</p>
+ </div>
+ </div>
 
-      <div class="kpi-card red">
-        <div class="kpi-icon">💰</div>
-        <div class="kpi-info">
-          <h3>Coût Total du Parc</h3>
-          <p class="kpi-value">{{ stats.totalCosts.toFixed(2) }} €</p>
-        </div>
-      </div>
-    </div>
+ <div class="kpi-card red">
+ <div class="kpi-icon"></div>
+ <div class="kpi-info">
+ <h3>Coût Total du Parc</h3>
+ <p class="kpi-value">{{ stats.totalCosts.toFixed(2) }} €</p>
+ </div>
+ </div>
+ </div>
 
-    <div class="details-grid">
-      
-      <div class="details-card">
-        <div class="card-title">🔌 Répartition du Matériel</div>
-        <table class="details-table">
-          <thead>
-            <tr><th>Type d'élément</th><th>Quantité</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>💻 Ordinateurs (Computers)</td><td class="badge-count gray">{{ stats.computers }}</td></tr>
-            <tr><td>🖥️ Moniteurs (Monitors)</td><td class="badge-count gray">{{ stats.monitors }}</td></tr>
-            <tr><td>🖨️ Imprimantes (Printers)</td><td class="badge-count gray">{{ stats.printers }}</td></tr>
-            <tr><td>🖱️ Périphériques (Peripherals)</td><td class="badge-count gray">{{ stats.peripherals }}</td></tr>
-          </tbody>
-        </table>
-      </div>
+ <div class="details-grid">
+ 
+ <div class="details-card">
+ <div class="card-title"> Répartition du Matériel</div>
+ <table class="details-table">
+ <thead>
+ <tr><th>Type d'élément</th><th>Quantité</th></tr>
+ </thead>
+ <tbody>
+ <tr><td> Ordinateurs (Computers)</td><td class="badge-count gray">{{ stats.computers }}</td></tr>
+ <tr><td> Moniteurs (Monitors)</td><td class="badge-count gray">{{ stats.monitors }}</td></tr>
+ <tr><td> Imprimantes (Printers)</td><td class="badge-count gray">{{ stats.printers }}</td></tr>
+ <tr><td> Périphériques (Peripherals)</td><td class="badge-count gray">{{ stats.peripherals }}</td></tr>
+ </tbody>
+ </table>
+ </div>
 
-      <div class="details-card">
-        <div class="card-title">🛠️ Suivi du Helpdesk & Tickets</div>
-        
-        <h4 class="sub-title">📌 Par Type</h4>
-        <table class="details-table compact">
-          <tbody>
-            <tr><td>🔴 Incidents</td><td class="badge-count red-bg">{{ stats.incidents }}</td></tr>
-            <tr><td>🟢 Demandes</td><td class="badge-count green-bg">{{ stats.demands }}</td></tr>
-          </tbody>
-        </table>
+ <div class="details-card">
+ <div class="card-title"> Suivi du Helpdesk & Tickets</div>
+ 
+ <h4 class="sub-title"> Par Type</h4>
+ <table class="details-table compact">
+ <tbody>
+ <tr><td> Incidents</td><td class="badge-count red-bg">{{ stats.incidents }}</td></tr>
+ <tr><td> Demandes</td><td class="badge-count green-bg">{{ stats.demands }}</td></tr>
+ </tbody>
+ </table>
 
-        <h4 class="sub-title" style="margin-top: 20px;">🔄 Par État d'avancement</h4>
-        <table class="details-table compact">
-          <tbody>
-            <tr><td>🆕 Nouveaux</td><td class="badge-count status-blue">{{ stats.statusNew }}</td></tr>
-            <tr><td>⏳ En cours (Assignés)</td><td class="badge-count status-orange">{{ stats.statusAssigned }}</td></tr>
-            <tr><td>📅 En cours (Planifiés)</td><td class="badge-count status-orange">{{ stats.statusPlanned }}</td></tr>
-            <tr><td>⏸️ En attente</td><td class="badge-count status-purple">{{ stats.statusWaiting }}</td></tr>
-            <tr><td>✅ Résolus</td><td class="badge-count status-green">{{ stats.statusSolved }}</td></tr>
-            <tr><td>📁 Clos</td><td class="badge-count status-gray">{{ stats.statusClosed }}</td></tr>
-          </tbody>
-        </table>
-      </div>
+ <h4 class="sub-title" style="margin-top: 20px;"> Par État d'avancement</h4>
+ <table class="details-table compact">
+ <tbody>
+ <tr><td> Nouveaux</td><td class="badge-count status-blue">{{ stats.statusNew }}</td></tr>
+ <tr><td> En cours (Assignés)</td><td class="badge-count status-orange">{{ stats.statusAssigned }}</td></tr>
+ <tr><td> En cours (Planifiés)</td><td class="badge-count status-orange">{{ stats.statusPlanned }}</td></tr>
+ <tr><td> En attente</td><td class="badge-count status-purple">{{ stats.statusWaiting }}</td></tr>
+ <tr><td> Résolus</td><td class="badge-count status-green">{{ stats.statusSolved }}</td></tr>
+ <tr><td> Clos</td><td class="badge-count status-gray">{{ stats.statusClosed }}</td></tr>
+ </tbody>
+ </table>
+ </div>
 
-    </div>
-  </div>
-  <div>
-    <RouterLink :to="{ name: 'accueil' }">
-    <button class="btn-secondary">Retour à l'accueil</button>
-    </RouterLink>
-  </div>
+ </div>
+ </div>
+ <div>
+ <RouterLink :to="{ name: 'accueil' }">
+ <button class="btn-secondary">Retour à l'accueil</button>
+ </RouterLink>
+ </div>
 </template>
 
 <script setup>
@@ -90,7 +90,7 @@ import { useDashboard } from '@/composables/useDashboard'
 const { stats, isLoading, refreshDashboard } = useDashboard()
 
 onMounted(() => {
-  refreshDashboard()
+ refreshDashboard()
 })
 </script>
 
@@ -127,7 +127,7 @@ onMounted(() => {
 .badge-count.red-bg { color: #e74c3c; }
 .badge-count.green-bg { color: #2ecc71; }
 
-/* 🎨 Couleurs des badges de statuts */
+/* Couleurs des badges de statuts */
 .status-blue { color: #3498db; }
 .status-orange { color: #e67e22; }
 .status-purple { color: #9b59b6; }

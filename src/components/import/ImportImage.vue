@@ -1,48 +1,48 @@
 <template>
-  <div class="import-container">
-    <div class="import-card">
-      <div class="card-header">
-        <span class="icon">🖼️</span>
-        <h3>Importation du Fichier ZIP - Photos du Parc</h3>
-      </div>
-      
-      <p class="description">
-        Sélectionnez le fichier <strong>.zip</strong> contenant les photos de vos équipements. 
-        Le système associera automatiquement chaque image (ex: <code>PC-ADM-001.png</code>) à l'ordinateur ou moniteur correspondant déjà présent dans GLPI.
-      </p>
+ <div class="import-container">
+ <div class="import-card">
+ <div class="card-header">
+ <span class="icon"></span>
+ <h3>Importation du Fichier ZIP - Photos du Parc</h3>
+ </div>
+ 
+ <p class="description">
+ Sélectionnez le fichier <strong>.zip</strong> contenant les photos de vos équipements. 
+ Le système associera automatiquement chaque image (ex: <code>PC-ADM-001.png</code>) à l'ordinateur ou moniteur correspondant déjà présent dans GLPI.
+ </p>
 
-      <div class="file-zone" :class="{ 'disabled': isImporting }">
-        <input 
-          type="file" 
-          id="zip-file" 
-          accept=".zip" 
-          @change="handleZipUpload" 
-          :disabled="isImporting" 
-        />
-        <label for="zip-file" class="file-label">
-          {{ isImporting ? 'Désarchivage...' : 'Choisir le fichier .zip' }}
-        </label>
-      </div>
+ <div class="file-zone" :class="{ 'disabled': isImporting }">
+ <input 
+ type="file" 
+ id="zip-file" 
+ accept=".zip" 
+ @change="handleZipUpload" 
+ :disabled="isImporting" 
+ />
+ <label for="zip-file" class="file-label">
+ {{ isImporting ? 'Désarchivage...' : 'Choisir le fichier .zip' }}
+ </label>
+ </div>
 
-      <div v-if="isImporting" class="progress-section">
-        <div class="progress-text">
-          Images importées : <strong>{{ currentProgress }}</strong> / <strong>{{ totalRows }}</strong>
-        </div>
-        <div class="progress-bar-container">
-          <div class="progress-bar" :style="{ width: progressPercentage + '%' }"></div>
-        </div>
-      </div>
+ <div v-if="isImporting" class="progress-section">
+ <div class="progress-text">
+ Images importées : <strong>{{ currentProgress }}</strong> / <strong>{{ totalRows }}</strong>
+ </div>
+ <div class="progress-bar-container">
+ <div class="progress-bar" :style="{ width: progressPercentage + '%' }"></div>
+ </div>
+ </div>
 
-      <div v-if="importSuccess" class="success-message">
-        🎉 Félicitations ! Toutes les photos valides du fichier ZIP ont été liées à vos matériels GLPI !
-      </div>
-    </div>
-  </div>
+ <div v-if="importSuccess" class="success-message">
+ Félicitations ! Toutes les photos valides du fichier ZIP ont été liées à vos matériels GLPI !
+ </div>
+ </div>
+ </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
-import JSZip from 'jszip' // 💡 Importation de la bibliothèque de gestion de ZIP
+import JSZip from 'jszip' // Importation de la bibliothèque de gestion de ZIP
 import { importService } from '@/services/importService'
 
 const isImporting = ref(false)
@@ -51,60 +51,60 @@ const currentProgress = ref(0)
 const totalRows = ref(0)
 
 const progressPercentage = computed(() => {
-  return totalRows.value === 0 ? 0 : Math.round((currentProgress.value / totalRows.value) * 100)
+ return totalRows.value === 0 ? 0 : Math.round((currentProgress.value / totalRows.value) * 100)
 })
 
 const handleZipUpload = async (event) => {
-  const file = event.target.files[0]
-  if (!file) return
+ const file = event.target.files[0]
+ if (!file) return
 
-  isImporting.value = true
-  importSuccess.value = false
-  totalRows.value = 0
-  currentProgress.value = 0
+ isImporting.value = true
+ importSuccess.value = false
+ totalRows.value = 0
+ currentProgress.value = 0
 
-  try {
-    const jsub = new JSZip()
-    // 1. Lecture et chargement du fichier ZIP complet
-    const zipContent = await jsub.loadAsync(file)
-    
-    // 2. On filtre pour ne garder que les fichiers images (on ignore les dossiers cachés comme __MACOSX)
-    const imageFiles = Object.values(zipContent.files).filter(zipEntry => {
-      return !zipEntry.dir && zipEntry.name.match(/\.(png|jpg|jpeg|gif)$/i) && !zipEntry.name.startsWith('__')
-    })
+ try {
+ const jsub = new JSZip()
+ // 1. Lecture et chargement du fichier ZIP complet
+ const zipContent = await jsub.loadAsync(file)
+ 
+ // 2. On filtre pour ne garder que les fichiers images (on ignore les dossiers cachés comme __MACOSX)
+ const imageFiles = Object.values(zipContent.files).filter(zipEntry => {
+ return !zipEntry.dir && zipEntry.name.match(/\.(png|jpg|jpeg|gif)$/i) && !zipEntry.name.startsWith('__')
+ })
 
-    totalRows.value = imageFiles.length
+ totalRows.value = imageFiles.length
 
-    if (totalRows.value === 0) {
-      alert("Le fichier ZIP ne contient aucune image valide (.png, .jpg).")
-      isImporting.value = false
-      return
-    }
+ if (totalRows.value === 0) {
+ alert("Le fichier ZIP ne contient aucune image valide (.png, .jpg).")
+ isImporting.value = false
+ return
+ }
 
-    // 3. Traitement séquentiel de chaque image présente dans le ZIP
-    for (const zipEntry of imageFiles) {
-      // Extraction du fichier au format binaire (Blob)
-      const fileBlob = await zipEntry.async('blob')
-      
-      // On sépare le nom et le chemin (ex: "photos/PC-ADM-001.png" -> "PC-ADM-001.png")
-      const fullFileName = zipEntry.name.split('/').pop()
-      // On retire l'extension pour n'avoir que le nom du matériel (ex: "PC-ADM-001")
-      const imageName = fullFileName.substring(0, fullFileName.lastIndexOf('.'))
+ // 3. Traitement séquentiel de chaque image présente dans le ZIP
+ for (const zipEntry of imageFiles) {
+ // Extraction du fichier au format binaire (Blob)
+ const fileBlob = await zipEntry.async('blob')
+ 
+ // On sépare le nom et le chemin (ex: "photos/PC-ADM-001.png" -> "PC-ADM-001.png")
+ const fullFileName = zipEntry.name.split('/').pop()
+ // On retire l'extension pour n'avoir que le nom du matériel (ex: "PC-ADM-001")
+ const imageName = fullFileName.substring(0, fullFileName.lastIndexOf('.'))
 
-      // Appel de notre service pour injecter et lier l'image
-      await importService.importImageLink(imageName, fileBlob, fullFileName)
-      
-      currentProgress.value++
-    }
+ // Appel de notre service pour injecter et lier l'image
+ await importService.importImageLink(imageName, fileBlob, fullFileName)
+ 
+ currentProgress.value++
+ }
 
-    importSuccess.value = true
-  } catch (error) {
-    console.error("Erreur lors du traitement du fichier ZIP :", error)
-    alert("Impossible de lire le fichier ZIP. Assurez-vous qu'il n'est pas corrompu.")
-  } finally {
-    isImporting.value = false
-    event.target.value = '' // Reset de l'input
-  }
+ importSuccess.value = true
+ } catch (error) {
+ console.error("Erreur lors du traitement du fichier ZIP :", error)
+ alert("Impossible de lire le fichier ZIP. Assurez-vous qu'il n'est pas corrompu.")
+ } finally {
+ isImporting.value = false
+ event.target.value = '' // Reset de l'input
+ }
 }
 </script>
 

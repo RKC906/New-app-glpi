@@ -1,50 +1,50 @@
 <template>
-  <div class="container">
-    <h2>Liste des Ordinateurs GLPI</h2>
+ <div class="container">
+ <h2>Liste des Ordinateurs GLPI</h2>
 
-     <RouterLink to="/back/computers/create">
-      <button class="btn-primary">Ajouter un Ordinateur</button>
-    </RouterLink>
-     <p><RouterLink to="/back/computerslocale">
-      <button class="btn-primary">Liste Glpi + Locale</button>
-    </RouterLink></p>
-        <RouterLink :to="{ name: 'accueil' }">
-    <button class="btn-secondary">Retour à l'accueil</button>
-    </RouterLink>
-    <p v-if="isLoading && computers.length === 0">Chargement...</p>
-    <p v-if="error" class="error">{{ error }}</p>
+ <RouterLink to="/back/computers/create">
+ <button class="btn-primary">Ajouter un Ordinateur</button>
+ </RouterLink>
+ <p><RouterLink to="/back/computerslocale">
+ <button class="btn-primary">Liste Glpi + Locale</button>
+ </RouterLink></p>
+ <RouterLink :to="{ name: 'accueil' }">
+ <button class="btn-secondary">Retour à l'accueil</button>
+ </RouterLink>
+ <p v-if="isLoading && computers.length === 0">Chargement...</p>
+ <p v-if="error" class="error">{{ error }}</p>
 
-    <table v-else class="computer-table">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Nom</th>
-          <th>Update</th>
-          <th>Delete</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="computer in computers" :key="computer.id">
-          <td>{{ computer.id }}</td>
-          <td><strong>{{ computer.name }}</strong></td>
-          <td>
-            <button @click="goToEdit(computer.id)" class="btn-edit">
-                Modifier
-            </button>
-          </td>
-          <td>
-            <button 
-              @click="handleDelete(computer.id, computer.name)" 
-              class="btn-delete"
-              :disabled="isLoading"
-            >
-              Supprimer
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+ <table v-else class="computer-table">
+ <thead>
+ <tr>
+ <th>ID</th>
+ <th>Nom</th>
+ <th>Update</th>
+ <th>Delete</th>
+ </tr>
+ </thead>
+ <tbody>
+ <tr v-for="computer in computers" :key="computer.id">
+ <td>{{ computer.id }}</td>
+ <td><strong>{{ computer.name }}</strong></td>
+ <td>
+ <button @click="goToEdit(computer.id)" class="btn-edit">
+ Modifier
+ </button>
+ </td>
+ <td>
+ <button 
+ @click="handleDelete(computer.id, computer.name)" 
+ class="btn-delete"
+ :disabled="isLoading"
+ >
+ Supprimer
+ </button>
+ </td>
+ </tr>
+ </tbody>
+ </table>
+ </div>
 </template>
 
 <script setup>
@@ -57,27 +57,27 @@ const router = useRouter()
 const { computers, isLoading, error, fetchComputers, delComputer } = useComputers()
 
 onMounted(() => {
-  fetchComputers()
+ fetchComputers()
 })
 
 // 2. La fonction liée au clic du bouton
 const handleDelete = async (id, computerName) => {
-  // Fenêtre de confirmation de sécurité
-  const confirmation = confirm(`Êtes-vous sûr de vouloir supprimer l'ordinateur "${computerName}" ?`)
-  
-  if (confirmation) {
-    try {
-      await delComputer(id)
-      alert("L'ordinateur a bien été envoyé à la corbeille GLPI !")
-    } catch (err) {
-      alert("Impossible de supprimer cet élément.")
-    }
-  }
+ // Fenêtre de confirmation de sécurité
+ const confirmation = confirm(`Êtes-vous sûr de vouloir supprimer l'ordinateur "${computerName}" ?`)
+ 
+ if (confirmation) {
+ try {
+ await delComputer(id)
+ alert("L'ordinateur a bien été envoyé à la corbeille GLPI !")
+ } catch (err) {
+ alert("Impossible de supprimer cet élément.")
+ }
+ }
 }
 
 // 3. Update bouton
 const goToEdit = (id) => {
-  router.push({ name: 'computer-edit', params: { id: id } })
+ router.push({ name: 'computer-edit', params: { id: id } })
 } 
 </script>
 
@@ -89,33 +89,33 @@ const goToEdit = (id) => {
 
 /* Style du bouton supprimer rouge et propre */
 .btn-delete {
-  background-color: #e74c3c;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: background 0.2s;
+ background-color: #e74c3c;
+ color: white;
+ border: none;
+ padding: 6px 12px;
+ border-radius: 4px;
+ cursor: pointer;
+ font-weight: bold;
+ transition: background 0.2s;
 }
 .btn-delete:hover {
-  background-color: #c0392b;
+ background-color: #c0392b;
 }
 .btn-delete:disabled {
-  background-color: #bdc3c7;
-  cursor: not-allowed;
+ background-color: #bdc3c7;
+ cursor: not-allowed;
 }
 .error { color: #e74c3c; font-weight: bold; }
 .btn-primary { padding: 10px 20px; background-color: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; }
 .btn-edit {
-  background-color: #3618db;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-  margin-right: 8px;
+ background-color: #3618db;
+ color: white;
+ border: none;
+ padding: 6px 12px;
+ border-radius: 4px;
+ cursor: pointer;
+ font-weight: bold;
+ margin-right: 8px;
 }
 .btn-edit:hover { background-color: #2980b9; }
 .btn-secondary { padding: 10px 20px; background-color: #7f8c8d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px; }

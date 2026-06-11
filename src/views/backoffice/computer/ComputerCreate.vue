@@ -1,32 +1,32 @@
 <template>
-  <div class="form-container">
-    <h2>Ajouter un nouvel Ordinateur</h2>
+ <div class="form-container">
+ <h2>Ajouter un nouvel Ordinateur</h2>
 
-    <RouterLink :to="{ name: 'computers' }">
-    <button class="btn-secondary">Retour à la liste</button>
-    </RouterLink>
-    
-    <form @submit.prevent="handleSubmit">
-      <div class="form-group">
-        <label for="name">Nom de l'ordinateur *</label>
-        <input 
-          v-model="formData.name" 
-          type="text" 
-          id="name" 
-          required 
-          placeholder="ex: PC-PROD-01"
-        />
-      </div>
+ <RouterLink :to="{ name: 'computers' }">
+ <button class="btn-secondary">Retour à la liste</button>
+ </RouterLink>
+ 
+ <form @submit.prevent="handleSubmit">
+ <div class="form-group">
+ <label for="name">Nom de l'ordinateur *</label>
+ <input 
+ v-model="formData.name" 
+ type="text" 
+ id="name" 
+ required 
+ placeholder="ex: PC-PROD-01"
+ />
+ </div>
 
-      <div class="actions">
-        <button type="submit" :disabled="isLoading">
-          {{ isLoading ? 'Création en cours...' : 'Enregistrer dans GLPI' }}
-        </button>
-      </div>
+ <div class="actions">
+ <button type="submit" :disabled="isLoading">
+ {{ isLoading ? 'Création en cours...' : 'Enregistrer dans GLPI' }}
+ </button>
+ </div>
 
-      <p v-if="error" class="error-msg">{{ error }}</p>
-    </form>
-  </div>
+ <p v-if="error" class="error-msg">{{ error }}</p>
+ </form>
+ </div>
 </template>
 
 <script setup>
@@ -39,18 +39,18 @@ const router = useRouter()
 
 // Structure de données calquée sur ce qu'attend le schéma de l'API GLPI
 const formData = ref({
-  name: ''
+ name: ''
 })
 
 const handleSubmit = async () => {
-  try {
-    await addComputer(formData.value)
-    alert("Ordinateur ajouté avec succès dans GLPI !")
-    // Redirection vers la liste des ordinateurs après le succès
-    router.push('/back/computers')
-  } catch (err) {
-    // L'erreur est déjà gérée dans le composable
-  }
+ try {
+ await addComputer(formData.value)
+ alert("Ordinateur ajouté avec succès dans GLPI !")
+ // Redirection vers la liste des ordinateurs après le succès
+ router.push('/back/computers')
+ } catch (err) {
+ // L'erreur est déjà gérée dans le composable
+ }
 }
 </script>
 

@@ -1,138 +1,138 @@
 <template>
-  <div class="tickets-manager">
-    <div class="tickets-sidebar">
-      <div class="sidebar-header">
-        <h3>Tickets GLPI ({{ filteredTickets.length }})</h3>
-        <button @click="loadTickets" :disabled="isLoading" class="btn-refresh-sm">Actualiser</button>
-      </div>
+ <div class="tickets-manager">
+ <div class="tickets-sidebar">
+ <div class="sidebar-header">
+ <h3>Tickets GLPI ({{ filteredTickets.length }})</h3>
+ <button @click="loadTickets" :disabled="isLoading" class="btn-refresh-sm">Actualiser</button>
+ </div>
 
-      <div class="sidebar-search">
-        <input 
-          v-model="searchQuery" 
-          type="text" 
-          placeholder="Rechercher par titre ou numéro (#12)..." 
-          class="search-input"
-        />
-      </div>
+ <div class="sidebar-search">
+ <input 
+ v-model="searchQuery" 
+ type="text" 
+ placeholder="Rechercher par titre ou numéro (#12)..." 
+ class="search-input"
+ />
+ </div>
 
-      <div v-if="isLoading && tickets.length === 0" class="loading-box">Chargement...</div>
+ <div v-if="isLoading && tickets.length === 0" class="loading-box">Chargement...</div>
 
-      <div class="tickets-list" v-else>
-        <div 
-          v-for="ticket in filteredTickets" 
-          :key="ticket.id" 
-          class="ticket-item-card"
-          :class="{ 'active': selectedTicket && selectedTicket.id === ticket.id }"
-          @click="selectTicket(ticket)"
-        >
-          <div class="ticket-card-header">
-            <span class="ticket-id">#{{ ticket.id }}</span>
-            <span class="badge-type" :class="ticket.type === 1 ? 'incident' : 'demand'">
-              {{ ticket.type === 1 ? 'Incident' : 'Demande' }}
-            </span>
-          </div>
-          <h4 class="ticket-card-title">{{ ticket.name }}</h4>
-          <div class="ticket-card-footer">
-            <span class="ticket-status-dot" :class="'status-' + ticket.status"></span>
-            <span class="ticket-date">{{ formatDate(ticket.date) }}</span>
-          </div>
-        </div>
-        
-        <div v-if="filteredTickets.length === 0" class="empty-search-state">
-          Aucun ticket ne correspond à la recherche.
-        </div>
-      </div>
-    </div>
+ <div class="tickets-list" v-else>
+ <div 
+ v-for="ticket in filteredTickets" 
+ :key="ticket.id" 
+ class="ticket-item-card"
+ :class="{ 'active': selectedTicket && selectedTicket.id === ticket.id }"
+ @click="selectTicket(ticket)"
+ >
+ <div class="ticket-card-header">
+ <span class="ticket-id">#{{ ticket.id }}</span>
+ <span class="badge-type" :class="ticket.type === 1 ? 'incident' : 'demand'">
+ {{ ticket.type === 1 ? 'Incident' : 'Demande' }}
+ </span>
+ </div>
+ <h4 class="ticket-card-title">{{ ticket.name }}</h4>
+ <div class="ticket-card-footer">
+ <span class="ticket-status-dot" :class="'status-' + ticket.status"></span>
+ <span class="ticket-date">{{ formatDate(ticket.date) }}</span>
+ </div>
+ </div>
+ 
+ <div v-if="filteredTickets.length === 0" class="empty-search-state">
+ Aucun ticket ne correspond à la recherche.
+ </div>
+ </div>
+ </div>
 
-    <div class="ticket-detail-view">
-      <div v-if="selectedTicket" class="fiche-container">
-        
-        <div class="fiche-header">
-          <div>
-            <span class="fiche-meta-id">TICKET #{{ selectedTicket.id }}</span>
-            <h2>{{ selectedTicket.name }}</h2>
-            <p class="fiche-date-author">Créé le {{ formatDate(selectedTicket.date) }}</p>
-          </div>
-          <div class="fiche-badges">
-            <span class="badge-status" :class="'status-bg-' + selectedTicket.status">
-              {{ getStatusLabel(selectedTicket.status) }}
-            </span>
-          </div>
-        </div>
+ <div class="ticket-detail-view">
+ <div v-if="selectedTicket" class="fiche-container">
+ 
+ <div class="fiche-header">
+ <div>
+ <span class="fiche-meta-id">TICKET #{{ selectedTicket.id }}</span>
+ <h2>{{ selectedTicket.name }}</h2>
+ <p class="fiche-date-author">Créé le {{ formatDate(selectedTicket.date) }}</p>
+ </div>
+ <div class="fiche-badges">
+ <span class="badge-status" :class="'status-bg-' + selectedTicket.status">
+ {{ getStatusLabel(selectedTicket.status) }}
+ </span>
+ </div>
+ </div>
 
-        <div class="fiche-section">
-          <h4 class="section-title">Description du problème</h4>
-          <div class="fiche-content-box" v-html="selectedTicket.content"></div>
-        </div>
+ <div class="fiche-section">
+ <h4 class="section-title">Description du problème</h4>
+ <div class="fiche-content-box" v-html="selectedTicket.content"></div>
+ </div>
 
-        <div class="fiche-section">
-          <h4 class="section-title">Équipements du Parc liés</h4>
-          <div v-if="isLoadingDetails" class="loading-box-sm">Recherche des liaisons...</div>
-          <div v-else-if="associatedItems.length === 0" class="empty-sub-section">
-            Aucun matériel associé à ce ticket.
-          </div>
-          <div v-else class="items-grid">
-            <div v-for="item in associatedItems" :key="item.id" class="associated-item-badge">
-              <div class="item-meta">
-                <strong class="item-name">{{ item.item_name }}</strong>
-                <span class="item-type-label">{{ item.itemtype }} (ID: {{ item.items_id }})</span>
-              </div>
-            </div>
-          </div>
-        </div>
+ <div class="fiche-section">
+ <h4 class="section-title">Équipements du Parc liés</h4>
+ <div v-if="isLoadingDetails" class="loading-box-sm">Recherche des liaisons...</div>
+ <div v-else-if="associatedItems.length === 0" class="empty-sub-section">
+ Aucun matériel associé à ce ticket.
+ </div>
+ <div v-else class="items-grid">
+ <div v-for="item in associatedItems" :key="item.id" class="associated-item-badge">
+ <div class="item-meta">
+ <strong class="item-name">{{ item.item_name }}</strong>
+ <span class="item-type-label">{{ item.itemtype }} (ID: {{ item.items_id }})</span>
+ </div>
+ </div>
+ </div>
+ </div>
 
-        <div class="fiche-section">
-          <h4 class="section-title">Suivi Financier & Coûts (Fichier 3)</h4>
-          <div v-if="isLoadingDetails" class="loading-box-sm">Calcul des coûts...</div>
-          <div v-else-if="ticketCosts.length === 0" class="empty-sub-section">
-            Aucune ligne financière imputée sur ce ticket.
-          </div>
-          <div v-else>
-            <table class="fiche-table-costs">
-              <thead>
-                <tr>
-                  <th>Désignation</th>
-                  <th>Temps d'action</th>
-                  <th>Coût Temps</th>
-                  <th>Coût Fixe</th>
-                  <th style="text-align: right;">Total Ligne</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="cost in ticketCosts" :key="cost.id">
-                  <td>{{ cost.name || 'Frais d\'intervention' }}</td>
-                  <td>{{ formatDuration(cost.actiontime) }}</td>
-                  <td>{{ cost.cost_time }} €</td>
-                  <td>{{ cost.cost_fixed }} €</td>
-                  <td style="text-align: right; font-weight: bold;">
-                    {{ (parseFloat(cost.cost_time) + parseFloat(cost.cost_fixed)).toFixed(2) }} €
-                  </td>
-                </tr>
-              </tbody>
-              <tfoot>
-                <tr class="total-row">
-                  <td colspan="4">Montant Total à imputer :</td>
-                  <td style="text-align: right;">{{ totalTicketSum.toFixed(2) }} €</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
+ <div class="fiche-section">
+ <h4 class="section-title">Suivi Financier & Coûts (Fichier 3)</h4>
+ <div v-if="isLoadingDetails" class="loading-box-sm">Calcul des coûts...</div>
+ <div v-else-if="ticketCosts.length === 0" class="empty-sub-section">
+ Aucune ligne financière imputée sur ce ticket.
+ </div>
+ <div v-else>
+ <table class="fiche-table-costs">
+ <thead>
+ <tr>
+ <th>Désignation</th>
+ <th>Temps d'action</th>
+ <th>Coût Temps</th>
+ <th>Coût Fixe</th>
+ <th style="text-align: right;">Total Ligne</th>
+ </tr>
+ </thead>
+ <tbody>
+ <tr v-for="cost in ticketCosts" :key="cost.id">
+ <td>{{ cost.name || 'Frais d\'intervention' }}</td>
+ <td>{{ formatDuration(cost.actiontime) }}</td>
+ <td>{{ cost.cost_time }} €</td>
+ <td>{{ cost.cost_fixed }} €</td>
+ <td style="text-align: right; font-weight: bold;">
+ {{ (parseFloat(cost.cost_time) + parseFloat(cost.cost_fixed)).toFixed(2) }} €
+ </td>
+ </tr>
+ </tbody>
+ <tfoot>
+ <tr class="total-row">
+ <td colspan="4">Montant Total à imputer :</td>
+ <td style="text-align: right;">{{ totalTicketSum.toFixed(2) }} €</td>
+ </tr>
+ </tfoot>
+ </table>
+ </div>
+ </div>
 
-      </div>
+ </div>
 
-      <div v-else class="empty-state">
-        <h3>Aucun ticket sélectionné</h3>
-        <p>Sélectionnez un ticket dans la colonne de gauche pour afficher sa fiche d'assistance complète et son historique financier.</p>
-      </div>
-    </div>
-  </div>
-  
-  <div class="navigation-footer">
-    <RouterLink :to="{ name: 'accueil' }">
-      <button class="btn-secondary">Retour à l'accueil</button>
-    </RouterLink>
-  </div>
+ <div v-else class="empty-state">
+ <h3>Aucun ticket sélectionné</h3>
+ <p>Sélectionnez un ticket dans la colonne de gauche pour afficher sa fiche d'assistance complète et son historique financier.</p>
+ </div>
+ </div>
+ </div>
+ 
+ <div class="navigation-footer">
+ <RouterLink :to="{ name: 'accueil' }">
+ <button class="btn-secondary">Retour à l'accueil</button>
+ </RouterLink>
+ </div>
 </template>
 
 <script setup>
@@ -140,18 +140,18 @@ import { ref, computed, onMounted } from 'vue'
 import { useTicketsManager } from '@/composables/useTicketsManager'
 
 const {
-  isLoading,
-  isLoadingDetails,
-  tickets,
-  selectedTicket,
-  associatedItems,
-  ticketCosts,
-  totalTicketSum,
-  loadTickets,
-  selectTicket,
-  formatDate,
-  formatDuration,
-  getStatusLabel
+ isLoading,
+ isLoadingDetails,
+ tickets,
+ selectedTicket,
+ associatedItems,
+ ticketCosts,
+ totalTicketSum,
+ loadTickets,
+ selectTicket,
+ formatDate,
+ formatDuration,
+ getStatusLabel
 } = useTicketsManager()
 
 // Variable locale pour stocker la chaîne de recherche
@@ -159,18 +159,18 @@ const searchQuery = ref('')
 
 // Propriété calculée pour filtrer les tickets réactivement
 const filteredTickets = computed(() => {
-  const query = searchQuery.value.toLowerCase().trim()
-  if (!query) return tickets.value
+ const query = searchQuery.value.toLowerCase().trim()
+ if (!query) return tickets.value
 
-  return tickets.value.filter(ticket => {
-    const matchesTitle = ticket.name ? ticket.name.toLowerCase().includes(query) : false
-    const matchesId = ticket.id ? ticket.id.toString().includes(query.replace('#', '')) : false
-    return matchesTitle || matchesId
-  })
+ return tickets.value.filter(ticket => {
+ const matchesTitle = ticket.name ? ticket.name.toLowerCase().includes(query) : false
+ const matchesId = ticket.id ? ticket.id.toString().includes(query.replace('#', '')) : false
+ return matchesTitle || matchesId
+ })
 })
 
 onMounted(() => {
-  loadTickets()
+ loadTickets()
 })
 </script>
 

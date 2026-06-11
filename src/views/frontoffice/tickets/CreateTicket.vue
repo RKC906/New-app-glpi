@@ -1,76 +1,76 @@
 <template>
-  <div class="kanban-page">
-    <div class="kanban-header">
-      <div class="header-left">
-        <h2>Tableau de Bord Kanban</h2>
-        <p class="subtitle">Gestion visuelle des tickets de support GLPI</p>
-      </div>
-      <button @click="refreshBoard" class="refresh-btn" :disabled="isLoading">
-        <span v-if="isLoading">⏳ Chargement...</span>
-        <span v-else>Actualiser</span>
-      </button>
-    </div>
+ <div class="kanban-page">
+ <div class="kanban-header">
+ <div class="header-left">
+ <h2>Tableau de Bord Kanban</h2>
+ <p class="subtitle">Gestion visuelle des tickets de support GLPI</p>
+ </div>
+ <button @click="refreshBoard" class="refresh-btn" :disabled="isLoading">
+ <span v-if="isLoading"> Chargement...</span>
+ <span v-else>Actualiser</span>
+ </button>
+ </div>
 
-    <div v-if="!isLoading" class="kanban-board">
-      
-      <div 
-        v-for="column in columnsConfig" 
-        :key="column.id" 
-        class="kanban-column"
-      >
-        <div class="column-header" :style="{ borderTopColor: column.color, backgroundColor: column.bg }">
-          <h3 :style="{ color: column.textColor }">{{ column.title }}</h3>
-          <span class="ticket-count" :style="{ backgroundColor: column.badgeBg, color: column.textColor }">
-            {{ boardLists[column.id]?.length || 0 }}
-          </span>
-        </div>
+ <div v-if="!isLoading" class="kanban-board">
+ 
+ <div 
+ v-for="column in columnsConfig" 
+ :key="column.id" 
+ class="kanban-column"
+ >
+ <div class="column-header" :style="{ borderTopColor: column.color, backgroundColor: column.bg }">
+ <h3 :style="{ color: column.textColor }">{{ column.title }}</h3>
+ <span class="ticket-count" :style="{ backgroundColor: column.badgeBg, color: column.textColor }">
+ {{ boardLists[column.id]?.length || 0 }}
+ </span>
+ </div>
 
-        <draggable
-          v-model="boardLists[column.id]"
-          group="tickets"
-          item-key="id"
-          class="column-cards-zone"
-          ghost-class="ghost-card"
-          @change="(evt) => handleCardMove(evt, column.id)"
-        >
-          <template #item="{ element }">
-            <div class="ticket-card" :key="element.id" @click="selectTicket(element)">
-              <div class="card-header-tags">
-                <span class="ticket-id">#{{ element.id }}</span>
-                <span class="priority-tag" :class="'prio-' + element.priority">
-                  P{{ element.priority }}
-                </span>
-              </div>
-              <h4 class="card-title">{{ element.name || 'Sans titre' }}</h4>
-              <div class="card-footer">
-                <span class="card-date">
-                  {{ element.date ? new Date(element.date).toLocaleDateString('fr-FR', {day: 'numeric', month: 'short'}) : 'N/A' }}
-                </span>
-              </div>
-            </div>
-          </template>
-        </draggable>
+ <draggable
+ v-model="boardLists[column.id]"
+ group="tickets"
+ item-key="id"
+ class="column-cards-zone"
+ ghost-class="ghost-card"
+ @change="(evt) => handleCardMove(evt, column.id)"
+ >
+ <template #item="{ element }">
+ <div class="ticket-card" :key="element.id" @click="selectTicket(element)">
+ <div class="card-header-tags">
+ <span class="ticket-id">#{{ element.id }}</span>
+ <span class="priority-tag" :class="'prio-' + element.priority">
+ P{{ element.priority }}
+ </span>
+ </div>
+ <h4 class="card-title">{{ element.name || 'Sans titre' }}</h4>
+ <div class="card-footer">
+ <span class="card-date">
+ {{ element.date ? new Date(element.date).toLocaleDateString('fr-FR', {day: 'numeric', month: 'short'}) : 'N/A' }}
+ </span>
+ </div>
+ </div>
+ </template>
+ </draggable>
 
-        <div v-if="column.id === 1" class="column-footer">
-          <button @click="showCreateModal = true" class="btn-add-ticket">
-            + Ajouter un ticket
-          </button>
-        </div>
-      </div>
+ <div v-if="column.id === 1" class="column-footer">
+ <button @click="showCreateModal = true" class="btn-add-ticket">
+ + Ajouter un ticket
+ </button>
+ </div>
+ </div>
 
-    </div>
+ </div>
 
-    <div v-else class="loading-state">
-      <div class="spinner"></div>
-      <p>Synchronisation en temps réel avec vos modules GLPI...</p>
-    </div>
+ <div v-else class="loading-state">
+ <div class="spinner"></div>
+ <p>Synchronisation en temps réel avec vos modules GLPI...</p>
+ </div>
 
-    <TicketCreateModal 
-      v-if="showCreateModal" 
-      @close="showCreateModal = false"
-      @success="handleTicketCreated"
-    />
-  </div>
+ <TicketCreateModal 
+ v-if="showCreateModal" 
+ @close="showCreateModal = false"
+ @success="handleTicketCreated"
+ />
+ </div>
 </template>
 
 <script setup>
@@ -84,43 +84,43 @@ const { tickets, isLoading, loadTickets, updateTicketStatus, selectTicket } = us
 const showCreateModal = ref(false)
 
 const columnsConfig = [
-  { id: 1, title: 'Nouveau', color: '#0ea5e9', bg: '#f0f9ff', textColor: '#0369a1', badgeBg: 'rgba(14, 165, 233, 0.15)' },
-  { id: 2, title: 'En Cours', color: '#f59e0b', bg: '#fffaf0', textColor: '#b45309', badgeBg: 'rgba(245, 158, 11, 0.15)' },
-  { id: 5, title: 'Résolu', color: '#10b981', bg: '#f0fdf4', textColor: '#15803d', badgeBg: 'rgba(16, 185, 129, 0.15)' }
+ { id: 1, title: 'Nouveau', color: '#0ea5e9', bg: '#f0f9ff', textColor: '#0369a1', badgeBg: 'rgba(14, 165, 233, 0.15)' },
+ { id: 2, title: 'En Cours', color: '#f59e0b', bg: '#fffaf0', textColor: '#b45309', badgeBg: 'rgba(245, 158, 11, 0.15)' },
+ { id: 5, title: 'Résolu', color: '#10b981', bg: '#f0fdf4', textColor: '#15803d', badgeBg: 'rgba(16, 185, 129, 0.15)' }
 ]
 
 const boardLists = reactive({ 1: [], 2: [], 5: [] })
 
 const dispatchTicketsToBoard = () => {
-  boardLists[1] = tickets.value.filter(t => parseInt(t.status) === 1)
-  boardLists[2] = tickets.value.filter(t => parseInt(t.status) === 2 || parseInt(t.status) === 3)
-  boardLists[5] = tickets.value.filter(t => parseInt(t.status) === 5 || parseInt(t.status) === 6)
+ boardLists[1] = tickets.value.filter(t => parseInt(t.status) === 1)
+ boardLists[2] = tickets.value.filter(t => parseInt(t.status) === 2 || parseInt(t.status) === 3)
+ boardLists[5] = tickets.value.filter(t => parseInt(t.status) === 5 || parseInt(t.status) === 6)
 }
 
 watch(tickets, () => { dispatchTicketsToBoard() }, { deep: true })
 
 const handleCardMove = async (event, targetStatusId) => {
-  if (!event.added) return
-  const targetTicket = event.added.element
-  try {
-    await updateTicketStatus(targetTicket.id, targetStatusId)
-    targetTicket.status = targetStatusId
-  } catch (error) {
-    refreshBoard()
-  }
+ if (!event.added) return
+ const targetTicket = event.added.element
+ try {
+ await updateTicketStatus(targetTicket.id, targetStatusId)
+ targetTicket.status = targetStatusId
+ } catch (error) {
+ refreshBoard()
+ }
 }
 
 const handleTicketCreated = () => {
-  showCreateModal.value = false
-  refreshBoard() // Recharge la liste globale pour voir apparaître le nouveau ticket
+ showCreateModal.value = false
+ refreshBoard() // Recharge la liste globale pour voir apparaître le nouveau ticket
 }
 
 const refreshBoard = () => {
-  loadTickets()
+ loadTickets()
 }
 
 onMounted(() => {
-  loadTickets()
+ loadTickets()
 })
 </script>
 

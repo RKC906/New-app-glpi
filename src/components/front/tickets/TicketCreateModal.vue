@@ -1,108 +1,108 @@
 <template>
-  <div class="modal-backdrop" @click.self="$emit('close')">
-    <div class="modal-container">
-      
-      <div class="modal-header">
-        <div>
-          <h3>Ouvrir un Nouveau Ticket d'Assistance</h3>
-          <p class="subtitle">Créez une intervention et associez-y un ou plusieurs équipements du parc informatique.</p>
-        </div>
-        <button class="btn-close" @click="$emit('close')">×</button>
-      </div>
+ <div class="modal-backdrop" @click.self="$emit('close')">
+ <div class="modal-container">
+ 
+ <div class="modal-header">
+ <div>
+ <h3>Ouvrir un Nouveau Ticket d'Assistance</h3>
+ <p class="subtitle">Créez une intervention et associez-y un ou plusieurs équipements du parc informatique.</p>
+ </div>
+ <button class="btn-close" @click="$emit('close')">×</button>
+ </div>
 
-      <form @submit.prevent="submitAndRedirect" class="ticket-grid-form">
-        
-        <div class="form-main-card">
-          <div class="form-group">
-            <label for="title">Titre de l'intervention</label>
-            <input 
-              id="title"
-              v-model="ticketForm.name" 
-              type="text" 
-              placeholder="Ex: Écran noir au démarrage ou demande d'installation de logiciel"
-              required
-            />
-          </div>
+ <form @submit.prevent="submitAndRedirect" class="ticket-grid-form">
+ 
+ <div class="form-main-card">
+ <div class="form-group">
+ <label for="title">Titre de l'intervention</label>
+ <input 
+ id="title"
+ v-model="ticketForm.name" 
+ type="text" 
+ placeholder="Ex: Écran noir au démarrage ou demande d'installation de logiciel"
+ required
+ />
+ </div>
 
-          <div class="form-row">
-            <div class="form-group">
-              <label for="type">Type</label>
-              <select id="type" v-model="ticketForm.type">
-                <option value="1">Incident (Panne / Dysfonctionnement)</option>
-                <option value="2">Demande (Besoin / Service / Matériel)</option>
-              </select>
-            </div>
+ <div class="form-row">
+ <div class="form-group">
+ <label for="type">Type</label>
+ <select id="type" v-model="ticketForm.type">
+ <option value="1">Incident (Panne / Dysfonctionnement)</option>
+ <option value="2">Demande (Besoin / Service / Matériel)</option>
+ </select>
+ </div>
 
-            <div class="form-group">
-              <label for="priority">Priorité</label>
-              <select id="priority" v-model="ticketForm.priority">
-                <option value="1">Très Basse</option>
-                <option value="2">Basse</option>
-                <option value="3">Moyenne</option>
-                <option value="4">Haute</option>
-                <option value="5">Très Haute</option>
-              </select>
-            </div>
-          </div>
+ <div class="form-group">
+ <label for="priority">Priorité</label>
+ <select id="priority" v-model="ticketForm.priority">
+ <option value="1">Très Basse</option>
+ <option value="2">Basse</option>
+ <option value="3">Moyenne</option>
+ <option value="4">Haute</option>
+ <option value="5">Très Haute</option>
+ </select>
+ </div>
+ </div>
 
-          <div class="form-group">
-            <label for="content">Description détaillée du problème</label>
-            <textarea 
-              id="content"
-              v-model="ticketForm.content" 
-              rows="6" 
-              placeholder="Décrivez précisément les symptômes constatés ou la nature de votre demande..."
-              required
-            ></textarea>
-          </div>
-        </div>
+ <div class="form-group">
+ <label for="content">Description détaillée du problème</label>
+ <textarea 
+ id="content"
+ v-model="ticketForm.content" 
+ rows="6" 
+ placeholder="Décrivez précisément les symptômes constatés ou la nature de votre demande..."
+ required
+ ></textarea>
+ </div>
+ </div>
 
-        <div class="form-sidebar-card">
-          <h3 class="sidebar-title">Équipements du parc associés</h3>
-          <p class="sidebar-desc">Sélectionnez le ou les matériels concernés par ce ticket.</p>
+ <div class="form-sidebar-card">
+ <h3 class="sidebar-title">Équipements du parc associés</h3>
+ <p class="sidebar-desc">Sélectionnez le ou les matériels concernés par ce ticket.</p>
 
-          <div class="asset-selector-box">
-            <label>Rechercher et ajouter un élément</label>
-            <select @change="e => { addAssetToTicket(e.target.value); e.target.value = ''; }" :disabled="isLoading">
-              <option value="">-- Choisir un équipement --</option>
-              <option v-for="asset in availableAssets" :key="asset.itemtype + '-' + asset.id" :value="asset.id">
-                {{ asset.name || 'Sans Nom' }} ({{ asset.itemtype }} #{{ asset.id }})
-              </option>
-            </select>
-          </div>
+ <div class="asset-selector-box">
+ <label>Rechercher et ajouter un élément</label>
+ <select @change="e => { addAssetToTicket(e.target.value); e.target.value = ''; }" :disabled="isLoading">
+ <option value="">-- Choisir un équipement --</option>
+ <option v-for="asset in availableAssets" :key="asset.itemtype + '-' + asset.id" :value="asset.id">
+ {{ asset.name || 'Sans Nom' }} ({{ asset.itemtype }} #{{ asset.id }})
+ </option>
+ </select>
+ </div>
 
-          <div class="selected-assets-list">
-            <h4>Matériels rattachés ({{ selectedAssets.length }})</h4>
-            
-            <div v-if="selectedAssets.length === 0" class="empty-assets-pane">
-              Aucun équipement associé pour le moment.
-            </div>
+ <div class="selected-assets-list">
+ <h4>Matériels rattachés ({{ selectedAssets.length }})</h4>
+ 
+ <div v-if="selectedAssets.length === 0" class="empty-assets-pane">
+ Aucun équipement associé pour le moment.
+ </div>
 
-            <div v-else class="assets-scroll-zone">
-              <div v-for="(asset, index) in selectedAssets" :key="'selected-' + index" class="asset-selected-row">
-                <div class="asset-row-info">
-                  <strong>{{ asset.name || 'Équipement sans nom' }}</strong>
-                  <span>{{ asset.itemtype }} (ID: #{{ asset.id }})</span>
-                </div>
-                <button type="button" @click="removeAssetFromTicket(index)" class="btn-remove-asset" title="Détacher">
-                  Retirer
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+ <div v-else class="assets-scroll-zone">
+ <div v-for="(asset, index) in selectedAssets" :key="'selected-' + index" class="asset-selected-row">
+ <div class="asset-row-info">
+ <strong>{{ asset.name || 'Équipement sans nom' }}</strong>
+ <span>{{ asset.itemtype }} (ID: #{{ asset.id }})</span>
+ </div>
+ <button type="button" @click="removeAssetFromTicket(index)" class="btn-remove-asset" title="Détacher">
+ Retirer
+ </button>
+ </div>
+ </div>
+ </div>
+ </div>
 
-      </form>
+ </form>
 
-      <div class="modal-footer">
-        <button type="button" class="btn-cancel" @click="$emit('close')">Annuler</button>
-        <button type="submit" :disabled="isSubmitting" @click="submitAndRedirect" class="btn-submit-ticket">
-          {{ isSubmitting ? 'Enregistrement GLPI...' : 'Enregistrer le Ticket' }}
-        </button>
-      </div>
+ <div class="modal-footer">
+ <button type="button" class="btn-cancel" @click="$emit('close')">Annuler</button>
+ <button type="submit" :disabled="isSubmitting" @click="submitAndRedirect" class="btn-submit-ticket">
+ {{ isSubmitting ? 'Enregistrement GLPI...' : 'Enregistrer le Ticket' }}
+ </button>
+ </div>
 
-    </div>
-  </div>
+ </div>
+ </div>
 </template>
 
 <script setup>
@@ -112,26 +112,26 @@ import { useTickets } from '@/composables/useTickets'
 const emit = defineEmits(['close', 'success'])
 
 const {
-  isLoading,
-  isSubmitting,
-  availableAssets,
-  ticketForm,
-  selectedAssets,
-  loadAvailableAssets,
-  addAssetToTicket,
-  removeAssetFromTicket,
-  handleSubmitTicket
+ isLoading,
+ isSubmitting,
+ availableAssets,
+ ticketForm,
+ selectedAssets,
+ loadAvailableAssets,
+ addAssetToTicket,
+ removeAssetFromTicket,
+ handleSubmitTicket
 } = useTickets()
 
 const submitAndRedirect = async () => {
-  const success = await handleSubmitTicket()
-  if (success) {
-    emit('success')
-  }
+ const success = await handleSubmitTicket()
+ if (success) {
+ emit('success')
+ }
 }
 
 onMounted(() => {
-  loadAvailableAssets()
+ loadAvailableAssets()
 })
 </script>
 
@@ -191,6 +191,6 @@ onMounted(() => {
 .btn-submit-ticket:disabled { background-color: #94a3b8; cursor: not-allowed; }
 
 @media (max-width: 850px) {
-  .ticket-grid-form { grid-template-columns: 1fr; }
+ .ticket-grid-form { grid-template-columns: 1fr; }
 }
 </style>

@@ -1,90 +1,90 @@
 <template>
-  <div class="kanban-page">
-    <div class="kanban-header">
-      <div class="header-left">
-        <h2>Tableau de Bord Kanban</h2>
-        <p class="subtitle">Gestion visuelle des tickets de support GLPI</p>
-      </div>
-      <button @click="refreshBoard" class="refresh-btn" :disabled="isLoading">
-        <span v-if="isLoading">Chargement...</span>
-        <span v-else>Actualiser</span>
-      </button>
-    </div>
+ <div class="kanban-page">
+ <div class="kanban-header">
+ <div class="header-left">
+ <h2>Tableau de Bord Kanban</h2>
+ <p class="subtitle">Gestion visuelle des tickets de support GLPI</p>
+ </div>
+ <button @click="refreshBoard" class="refresh-btn" :disabled="isLoading">
+ <span v-if="isLoading">Chargement...</span>
+ <span v-else>Actualiser</span>
+ </button>
+ </div>
 
-    <div class="search-container">
-      <input 
-        v-model="searchQuery" 
-        type="text" 
-        placeholder="Rechercher un ticket par titre ou numéro (#125)..." 
-        class="search-input"
-      />
-    </div>
+ <div class="search-container">
+ <input 
+ v-model="searchQuery" 
+ type="text" 
+ placeholder="Rechercher un ticket par titre ou numéro (#125)..." 
+ class="search-input"
+ />
+ </div>
 
-    <div v-if="!isLoading" class="kanban-board">
-      
-      <div 
-        v-for="column in columnsConfig" 
-        :key="column.id" 
-        class="kanban-column"
-      >
-        <div class="column-header" :style="{ borderTopColor: column.color, backgroundColor: column.bg }">
-          <h3 :style="{ color: column.textColor }">{{ column.title }}</h3>
-          <span class="ticket-count" :style="{ backgroundColor: column.badgeBg, color: column.textColor }">
-            {{ boardLists[column.id]?.length || 0 }}
-          </span>
-        </div>
+ <div v-if="!isLoading" class="kanban-board">
+ 
+ <div 
+ v-for="column in columnsConfig" 
+ :key="column.id" 
+ class="kanban-column"
+ >
+ <div class="column-header" :style="{ borderTopColor: column.color, backgroundColor: column.bg }">
+ <h3 :style="{ color: column.textColor }">{{ column.title }}</h3>
+ <span class="ticket-count" :style="{ backgroundColor: column.badgeBg, color: column.textColor }">
+ {{ boardLists[column.id]?.length || 0 }}
+ </span>
+ </div>
 
-        <draggable
-          v-model="boardLists[column.id]"
-          group="tickets"
-          item-key="id"
-          class="column-cards-zone"
-          ghost-class="ghost-card"
-          @change="(evt) => handleCardMove(evt, column.id)"
-        >
-          <template #item="{ element }">
-            <div class="ticket-card" :key="element.id" @click="handleOpenDetails(element)">
-              <div class="card-header-tags">
-                <span class="ticket-id">#{{ element.id }}</span>
-                <span class="priority-tag" :class="'prio-' + element.priority">
-                  P{{ element.priority }}
-                </span>
-              </div>
-              <h4 class="card-title">{{ element.name || 'Sans titre' }}</h4>
-              <div class="card-footer">
-                <span class="card-date">
-                  {{ element.date ? new Date(element.date).toLocaleDateString('fr-FR', {day: 'numeric', month: 'short'}) : 'N/A' }}
-                </span>
-              </div>
-            </div>
-          </template>
-        </draggable>
+ <draggable
+ v-model="boardLists[column.id]"
+ group="tickets"
+ item-key="id"
+ class="column-cards-zone"
+ ghost-class="ghost-card"
+ @change="(evt) => handleCardMove(evt, column.id)"
+ >
+ <template #item="{ element }">
+ <div class="ticket-card" :key="element.id" @click="handleOpenDetails(element)">
+ <div class="card-header-tags">
+ <span class="ticket-id">#{{ element.id }}</span>
+ <span class="priority-tag" :class="'prio-' + element.priority">
+ P{{ element.priority }}
+ </span>
+ </div>
+ <h4 class="card-title">{{ element.name || 'Sans titre' }}</h4>
+ <div class="card-footer">
+ <span class="card-date">
+ {{ element.date ? new Date(element.date).toLocaleDateString('fr-FR', {day: 'numeric', month: 'short'}) : 'N/A' }}
+ </span>
+ </div>
+ </div>
+ </template>
+ </draggable>
 
-        <div v-if="column.id === 1" class="column-footer">
-          <button @click="showCreateModal = true" class="btn-add-ticket">
-            + Ajouter un ticket
-          </button>
-        </div>
-      </div>
+ <div v-if="column.id === 1" class="column-footer">
+ <button @click="showCreateModal = true" class="btn-add-ticket">
+ + Ajouter un ticket
+ </button>
+ </div>
+ </div>
 
-    </div>
+ </div>
 
-    <div v-else class="loading-state">
-      <div class="spinner"></div>
-      <p>Synchronisation en temps réel avec vos modules GLPI...</p>
-    </div>
+ <div v-else class="loading-state">
+ <div class="spinner"></div>
+ <p>Synchronisation en temps réel avec vos modules GLPI...</p>
+ </div>
 
-    <TicketCreateModal 
-      v-if="showCreateModal" 
-      @close="showCreateModal = false"
-      @success="handleTicketCreated"
-    />
+ <TicketCreateModal 
+ v-if="showCreateModal" 
+ @close="showCreateModal = false"
+ @success="handleTicketCreated"
+ />
 
-    <TicketDetailModal 
-      v-if="showDetailModal"
-      @close="showDetailModal = false"
-    />
-  </div>
+ <TicketDetailModal 
+ v-if="showDetailModal"
+ @close="showDetailModal = false"
+ />
+ </div>
 </template>
 
 <script setup>
@@ -104,9 +104,9 @@ const searchQuery = ref('')
 
 // Configuration initiale par défaut
 const columnsConfig = ref([
-  { id: 1, title: 'Nouveau', color: '#0ea5e9', bg: '#f0f9ff', textColor: '#0369a1', badgeBg: 'rgba(14, 165, 233, 0.15)' },
-  { id: 2, title: 'En Cours', color: '#f59e0b', bg: '#fffaf0', textColor: '#b45309', badgeBg: 'rgba(245, 158, 11, 0.15)' },
-  { id: 5, title: 'Résolu', color: '#10b981', bg: '#f0fdf4', textColor: '#15803d', badgeBg: 'rgba(16, 185, 129, 0.15)' }
+ { id: 1, title: 'Nouveau', color: '#0ea5e9', bg: '#f0f9ff', textColor: '#0369a1', badgeBg: 'rgba(14, 165, 233, 0.15)' },
+ { id: 2, title: 'En Cours', color: '#f59e0b', bg: '#fffaf0', textColor: '#b45309', badgeBg: 'rgba(245, 158, 11, 0.15)' },
+ { id: 5, title: 'Résolu', color: '#10b981', bg: '#f0fdf4', textColor: '#15803d', badgeBg: 'rgba(16, 185, 129, 0.15)' }
 ])
 
 const boardLists = reactive({ 1: [], 2: [], 5: [] })
@@ -115,81 +115,81 @@ const boardLists = reactive({ 1: [], 2: [], 5: [] })
  * Lit la configuration SQLite (Couleurs + Langue choisie par l'admin)
  */
 const loadCustomKanbanConfig = async () => {
-  try {
-    const config = await kanbanConfigService.fetchConfig()
-    // Forcer en minuscule et nettoyer la langue active
-    const activeLang = (config.currentLang || 'fr').toLowerCase().trim() 
+ try {
+ const config = await kanbanConfigService.fetchConfig()
+ // Forcer en minuscule et nettoyer la langue active
+ const activeLang = (config.currentLang || 'fr').toLowerCase().trim() 
 
-    columnsConfig.value = columnsConfig.value.map(column => {
-      const customColor = config.colors.find(c => c.id_status === column.id)
-      
-      // Sécuriser la comparaison de la langue
-      const customTrans = config.translations.find(t => {
-        const tLang = (t.langue || '').toLowerCase().trim()
-        return t.id_status === column.id && tLang === activeLang
-      })
+ columnsConfig.value = columnsConfig.value.map(column => {
+ const customColor = config.colors.find(c => c.id_status === column.id)
+ 
+ // Sécuriser la comparaison de la langue
+ const customTrans = config.translations.find(t => {
+ const tLang = (t.langue || '').toLowerCase().trim()
+ return t.id_status === column.id && tLang === activeLang
+ })
 
-      return {
-        ...column,
-        bg: customColor ? customColor.color : column.bg,
-        // Si customTrans existe, on prend sa traduction, sinon on garde la valeur par défaut
-        title: customTrans ? customTrans.translation : column.title
-      }
-    })
-  } catch (error) {
-    console.error('Erreur de chargement des paramètres SQLite:', error)
-  }
+ return {
+ ...column,
+ bg: customColor ? customColor.color : column.bg,
+ // Si customTrans existe, on prend sa traduction, sinon on garde la valeur par défaut
+ title: customTrans ? customTrans.translation : column.title
+ }
+ })
+ } catch (error) {
+ console.error('Erreur de chargement des paramètres SQLite:', error)
+ }
 }
 
 const dispatchTicketsToBoard = () => {
-  const filtered = tickets.value.filter(t => {
-    const query = searchQuery.value.toLowerCase().trim()
-    if (!query) return true
-    
-    const matchesTitle = t.name ? t.name.toLowerCase().includes(query) : false
-    const matchesId = t.id ? t.id.toString().includes(query.replace('#', '')) : false
-    
-    return matchesTitle || matchesId
-  })
+ const filtered = tickets.value.filter(t => {
+ const query = searchQuery.value.toLowerCase().trim()
+ if (!query) return true
+ 
+ const matchesTitle = t.name ? t.name.toLowerCase().includes(query) : false
+ const matchesId = t.id ? t.id.toString().includes(query.replace('#', '')) : false
+ 
+ return matchesTitle || matchesId
+ })
 
-  boardLists[1] = filtered.filter(t => parseInt(t.status) === 1)
-  boardLists[2] = filtered.filter(t => parseInt(t.status) === 2 || parseInt(t.status) === 3)
-  boardLists[5] = filtered.filter(t => parseInt(t.status) === 5 || parseInt(t.status) === 6)
+ boardLists[1] = filtered.filter(t => parseInt(t.status) === 1)
+ boardLists[2] = filtered.filter(t => parseInt(t.status) === 2 || parseInt(t.status) === 3)
+ boardLists[5] = filtered.filter(t => parseInt(t.status) === 5 || parseInt(t.status) === 6)
 }
 
 watch([tickets, searchQuery], () => { 
-  dispatchTicketsToBoard() 
+ dispatchTicketsToBoard() 
 }, { deep: true })
 
 const handleCardMove = async (event, targetStatusId) => {
-  if (!event.added) return
-  const targetTicket = event.added.element
-  try {
-    await updateTicketStatus(targetTicket.id, targetStatusId)
-    targetTicket.status = targetStatusId
-  } catch (error) {
-    refreshBoard()
-  }
+ if (!event.added) return
+ const targetTicket = event.added.element
+ try {
+ await updateTicketStatus(targetTicket.id, targetStatusId)
+ targetTicket.status = targetStatusId
+ } catch (error) {
+ refreshBoard()
+ }
 }
 
 const handleOpenDetails = async (ticket) => {
-  showDetailModal.value = true
-  await selectTicket(ticket)
+ showDetailModal.value = true
+ await selectTicket(ticket)
 }
 
 const handleTicketCreated = () => {
-  showCreateModal.value = false
-  refreshBoard()
+ showCreateModal.value = false
+ refreshBoard()
 }
 
 const refreshBoard = () => {
-  loadTickets()
-  loadCustomKanbanConfig() // Se remet à jour avec la langue et les couleurs de l'admin
+ loadTickets()
+ loadCustomKanbanConfig() // Se remet à jour avec la langue et les couleurs de l'admin
 }
 
 onMounted(() => {
-  loadTickets()
-  loadCustomKanbanConfig()
+ loadTickets()
+ loadCustomKanbanConfig()
 })
 </script>
 

@@ -1,90 +1,90 @@
 <template>
-  <div class="modal-backdrop" @click.self="$emit('close')">
-    <div class="modal-container">
-      
-      <div class="modal-header">
-        <div>
-          <span class="fiche-meta-id">TICKET #{{ selectedTicket?.id }}</span>
-          <h2>{{ selectedTicket?.name }}</h2>
-          <p class="fiche-date-author">Créé le {{ formatDate(selectedTicket?.date) }}</p>
-        </div>
-        <div class="header-right">
-          <span class="badge-status" :class="'status-bg-' + selectedTicket?.status">
-            {{ getStatusLabel(selectedTicket?.status) }}
-          </span>
-          <button class="btn-close" @click="$emit('close')">×</button>
-        </div>
-      </div>
+ <div class="modal-backdrop" @click.self="$emit('close')">
+ <div class="modal-container">
+ 
+ <div class="modal-header">
+ <div>
+ <span class="fiche-meta-id">TICKET #{{ selectedTicket?.id }}</span>
+ <h2>{{ selectedTicket?.name }}</h2>
+ <p class="fiche-date-author">Créé le {{ formatDate(selectedTicket?.date) }}</p>
+ </div>
+ <div class="header-right">
+ <span class="badge-status" :class="'status-bg-' + selectedTicket?.status">
+ {{ getStatusLabel(selectedTicket?.status) }}
+ </span>
+ <button class="btn-close" @click="$emit('close')">×</button>
+ </div>
+ </div>
 
-      <div class="modal-body">
-        
-        <div class="fiche-section">
-          <h4 class="section-title">Description du problème</h4>
-          <div class="fiche-content-box" v-html="selectedTicket?.content"></div>
-        </div>
+ <div class="modal-body">
+ 
+ <div class="fiche-section">
+ <h4 class="section-title">Description du problème</h4>
+ <div class="fiche-content-box" v-html="selectedTicket?.content"></div>
+ </div>
 
-        <div class="fiche-section">
-          <h4 class="section-title">Équipements du Parc liés</h4>
-          <div v-if="isLoadingDetails" class="loading-box-sm">Recherche des liaisons...</div>
-          <div v-else-if="associatedItems.length === 0" class="empty-sub-section">
-            Aucun matériel associé à ce ticket.
-          </div>
-          <div v-else class="items-grid">
-            <div v-for="item in associatedItems" :key="item.id" class="associated-item-badge">
-              <div class="item-meta">
-                <strong class="item-name">{{ item.item_name }}</strong>
-                <span class="item-type-label">{{ item.itemtype }} (ID: {{ item.items_id }})</span>
-              </div>
-            </div>
-          </div>
-        </div>
+ <div class="fiche-section">
+ <h4 class="section-title">Équipements du Parc liés</h4>
+ <div v-if="isLoadingDetails" class="loading-box-sm">Recherche des liaisons...</div>
+ <div v-else-if="associatedItems.length === 0" class="empty-sub-section">
+ Aucun matériel associé à ce ticket.
+ </div>
+ <div v-else class="items-grid">
+ <div v-for="item in associatedItems" :key="item.id" class="associated-item-badge">
+ <div class="item-meta">
+ <strong class="item-name">{{ item.item_name }}</strong>
+ <span class="item-type-label">{{ item.itemtype }} (ID: {{ item.items_id }})</span>
+ </div>
+ </div>
+ </div>
+ </div>
 
-        <div class="fiche-section">
-          <h4 class="section-title">Suivi Financier et Coûts</h4>
-          <div v-if="isLoadingDetails" class="loading-box-sm">Calcul des coûts...</div>
-          <div v-else-if="ticketCosts.length === 0" class="empty-sub-section">
-            Aucune ligne financière imputée sur ce ticket.
-          </div>
-          <div v-else>
-            <table class="fiche-table-costs">
-              <thead>
-                <tr>
-                  <th>Désignation</th>
-                  <th>Temps d'action</th>
-                  <th>Coût Temps</th>
-                  <th>Coût Fixe</th>
-                  <th style="text-align: right;">Total Ligne</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="cost in ticketCosts" :key="cost.id">
-                  <td>{{ cost.name || 'Frais d\'intervention' }}</td>
-                  <td>{{ formatDuration(cost.actiontime) }}</td>
-                  <td>{{ cost.cost_time }} €</td>
-                  <td>{{ cost.cost_fixed }} €</td>
-                  <td style="text-align: right; font-weight: bold;">
-                    {{ (parseFloat(cost.cost_time) + parseFloat(cost.cost_fixed)).toFixed(2) }} €
-                  </td>
-                </tr>
-              </tbody>
-              <tfoot>
-                <tr class="total-row">
-                  <td colspan="4">Montant Total à imputer :</td>
-                  <td style="text-align: right;">{{ totalTicketSum.toFixed(2) }} €</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
+ <div class="fiche-section">
+ <h4 class="section-title">Suivi Financier et Coûts</h4>
+ <div v-if="isLoadingDetails" class="loading-box-sm">Calcul des coûts...</div>
+ <div v-else-if="ticketCosts.length === 0" class="empty-sub-section">
+ Aucune ligne financière imputée sur ce ticket.
+ </div>
+ <div v-else>
+ <table class="fiche-table-costs">
+ <thead>
+ <tr>
+ <th>Désignation</th>
+ <th>Temps d'action</th>
+ <th>Coût Temps</th>
+ <th>Coût Fixe</th>
+ <th style="text-align: right;">Total Ligne</th>
+ </tr>
+ </thead>
+ <tbody>
+ <tr v-for="cost in ticketCosts" :key="cost.id">
+ <td>{{ cost.name || 'Frais d\'intervention' }}</td>
+ <td>{{ formatDuration(cost.actiontime) }}</td>
+ <td>{{ cost.cost_time }} €</td>
+ <td>{{ cost.cost_fixed }} €</td>
+ <td style="text-align: right; font-weight: bold;">
+ {{ (parseFloat(cost.cost_time) + parseFloat(cost.cost_fixed)).toFixed(2) }} €
+ </td>
+ </tr>
+ </tbody>
+ <tfoot>
+ <tr class="total-row">
+ <td colspan="4">Montant Total à imputer :</td>
+ <td style="text-align: right;">{{ totalTicketSum.toFixed(2) }} €</td>
+ </tr>
+ </tfoot>
+ </table>
+ </div>
+ </div>
 
-      </div>
+ </div>
 
-      <div class="modal-footer">
-        <button class="btn-primary-close" @click="$emit('close')">Fermer la fiche</button>
-      </div>
+ <div class="modal-footer">
+ <button class="btn-primary-close" @click="$emit('close')">Fermer la fiche</button>
+ </div>
 
-    </div>
-  </div>
+ </div>
+ </div>
 </template>
 
 <script setup>
@@ -93,14 +93,14 @@ import { useTicketsManager } from '@/composables/useTicketsManager'
 defineEmits(['close'])
 
 const {
-  isLoadingDetails,
-  selectedTicket,
-  associatedItems,
-  ticketCosts,
-  totalTicketSum,
-  formatDate,
-  formatDuration,
-  getStatusLabel
+ isLoadingDetails,
+ selectedTicket,
+ associatedItems,
+ ticketCosts,
+ totalTicketSum,
+ formatDate,
+ formatDuration,
+ getStatusLabel
 } = useTicketsManager()
 </script>
 
