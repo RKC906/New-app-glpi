@@ -92,7 +92,9 @@ const handleZipUpload = async (event) => {
       const imageName = fullFileName.substring(0, fullFileName.lastIndexOf('.'))
 
       // Appel de notre service pour injecter et lier l'image
-      await importService.importImageLink(imageName, fileBlob, fullFileName)
+      // await importService.importImageLink(imageName, fileBlob, fullFileName)
+      //function Diary
+      await importService.uploadImageWithMagicBytes(imageName, fileBlob, fullFileName)
       
       currentProgress.value++
     }
