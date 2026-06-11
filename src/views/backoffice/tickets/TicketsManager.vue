@@ -2,15 +2,24 @@
   <div class="tickets-manager">
     <div class="tickets-sidebar">
       <div class="sidebar-header">
-        <h3>🎫 Tickets GLPI ({{ tickets.length }})</h3>
-        <button @click="loadTickets" :disabled="isLoading" class="btn-refresh-sm">🔄</button>
+        <h3>Tickets GLPI ({{ filteredTickets.length }})</h3>
+        <button @click="loadTickets" :disabled="isLoading" class="btn-refresh-sm">Actualiser</button>
+      </div>
+
+      <div class="sidebar-search">
+        <input 
+          v-model="searchQuery" 
+          type="text" 
+          placeholder="Rechercher par titre ou numéro (#12)..." 
+          class="search-input"
+        />
       </div>
 
       <div v-if="isLoading && tickets.length === 0" class="loading-box">Chargement...</div>
 
       <div class="tickets-list" v-else>
         <div 
-          v-for="ticket in tickets" 
+          v-for="ticket in filteredTickets" 
           :key="ticket.id" 
           class="ticket-item-card"
           :class="{ 'active': selectedTicket && selectedTicket.id === ticket.id }"
@@ -27,6 +36,10 @@
             <span class="ticket-status-dot" :class="'status-' + ticket.status"></span>
             <span class="ticket-date">{{ formatDate(ticket.date) }}</span>
           </div>
+        </div>
+        
+        <div v-if="filteredTickets.length === 0" class="empty-search-state">
+          Aucun ticket ne correspond à la recherche.
         </div>
       </div>
     </div>
@@ -48,19 +61,18 @@
         </div>
 
         <div class="fiche-section">
-          <h4 class="section-title">📝 Description du problème</h4>
+          <h4 class="section-title">Description du problème</h4>
           <div class="fiche-content-box" v-html="selectedTicket.content"></div>
         </div>
 
         <div class="fiche-section">
-          <h4 class="section-title">🔌 Équipements du Parc liés</h4>
+          <h4 class="section-title">Équipements du Parc liés</h4>
           <div v-if="isLoadingDetails" class="loading-box-sm">Recherche des liaisons...</div>
           <div v-else-if="associatedItems.length === 0" class="empty-sub-section">
             Aucun matériel associé à ce ticket.
           </div>
           <div v-else class="items-grid">
             <div v-for="item in associatedItems" :key="item.id" class="associated-item-badge">
-              <span class="item-icon">{{ item.itemtype === 'Computer' ? '💻' : '🖥️' }}</span>
               <div class="item-meta">
                 <strong class="item-name">{{ item.item_name }}</strong>
                 <span class="item-type-label">{{ item.itemtype }} (ID: {{ item.items_id }})</span>
@@ -70,7 +82,7 @@
         </div>
 
         <div class="fiche-section">
-          <h4 class="section-title">💰 Suivi Financier & Coûts (Fichier 3)</h4>
+          <h4 class="section-title">Suivi Financier & Coûts (Fichier 3)</h4>
           <div v-if="isLoadingDetails" class="loading-box-sm">Calcul des coûts...</div>
           <div v-else-if="ticketCosts.length === 0" class="empty-sub-section">
             Aucune ligne financière imputée sur ce ticket.
@@ -88,8 +100,8 @@
               </thead>
               <tbody>
                 <tr v-for="cost in ticketCosts" :key="cost.id">
-                  <td>ℹ️ {{ cost.name || 'Frais d\'intervention' }}</td>
-                  <td>⏱️ {{ formatDuration(cost.actiontime) }}</td>
+                  <td>{{ cost.name || 'Frais d\'intervention' }}</td>
+                  <td>{{ formatDuration(cost.actiontime) }}</td>
                   <td>{{ cost.cost_time }} €</td>
                   <td>{{ cost.cost_fixed }} €</td>
                   <td style="text-align: right; font-weight: bold;">
@@ -110,24 +122,23 @@
       </div>
 
       <div v-else class="empty-state">
-        <div class="empty-icon">🎫</div>
         <h3>Aucun ticket sélectionné</h3>
         <p>Sélectionnez un ticket dans la colonne de gauche pour afficher sa fiche d'assistance complète et son historique financier.</p>
       </div>
     </div>
   </div>
-  <div>
-        <RouterLink :to="{ name: 'accueil' }">
-    <button class="btn-secondary">Retour à l'accueil</button>
+  
+  <div class="navigation-footer">
+    <RouterLink :to="{ name: 'accueil' }">
+      <button class="btn-secondary">Retour à l'accueil</button>
     </RouterLink>
   </div>
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
-import { useTicketsManager } from '@/composables/useTicketsManager' // 👈 Importation de la logique déportée
+import { ref, computed, onMounted } from 'vue'
+import { useTicketsManager } from '@/composables/useTicketsManager'
 
-// Extraction des données et méthodes du Composable
 const {
   isLoading,
   isLoadingDetails,
@@ -143,18 +154,40 @@ const {
   getStatusLabel
 } = useTicketsManager()
 
-// Chargement automatique
+// Variable locale pour stocker la chaîne de recherche
+const searchQuery = ref('')
+
+// Propriété calculée pour filtrer les tickets réactivement
+const filteredTickets = computed(() => {
+  const query = searchQuery.value.toLowerCase().trim()
+  if (!query) return tickets.value
+
+  return tickets.value.filter(ticket => {
+    const matchesTitle = ticket.name ? ticket.name.toLowerCase().includes(query) : false
+    const matchesId = ticket.id ? ticket.id.toString().includes(query.replace('#', '')) : false
+    return matchesTitle || matchesId
+  })
+})
+
 onMounted(() => {
   loadTickets()
 })
 </script>
 
 <style scoped>
-.tickets-manager { display: flex; height: calc(100vh - 40px); background-color: #f8f9fa; font-family: sans-serif; }
+.tickets-manager { display: flex; height: calc(100vh - 90px); background-color: #f8f9fa; font-family: sans-serif; }
 .tickets-sidebar { width: 350px; background: white; border-right: 1px solid #e9ecef; display: flex; flex-direction: column; }
 .sidebar-header { padding: 20px; border-bottom: 1px solid #f1f3f5; display: flex; justify-content: space-between; align-items: center; }
 .sidebar-header h3 { margin: 0; color: #2c3e50; font-size: 1.1rem; }
-.btn-refresh-sm { background: #f1f3f5; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; }
+.btn-refresh-sm { background: #f1f3f5; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; color: #4f5f6f; }
+.btn-refresh-sm:hover { background: #e9ecef; }
+
+/* Styles de la nouvelle zone de recherche sidebar */
+.sidebar-search { padding: 12px 15px; background-color: #fdfdfd; border-bottom: 1px solid #f1f3f5; }
+.search-input { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem; color: #1e293b; outline: none; box-sizing: border-box; }
+.search-input:focus { border-color: #3498db; box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1); }
+.empty-search-state { padding: 20px; text-align: center; color: #95a5a6; font-size: 0.9rem; }
+
 .tickets-list { flex: 1; overflow-y: auto; padding: 15px; }
 .ticket-item-card { background: #fdfdfd; border: 1px solid #e9ecef; border-radius: 6px; padding: 15px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; }
 .ticket-item-card:hover { border-color: #3498db; background: #fafbfc; }
@@ -172,6 +205,7 @@ onMounted(() => {
 .status-2 { background-color: #e67e22; }
 .status-5 { background-color: #2ecc71; }
 .status-6 { background-color: #95a5a6; }
+
 .ticket-detail-view { flex: 1; overflow-y: auto; padding: 30px; }
 .fiche-container { background: white; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); padding: 30px; max-width: 900px; margin: 0 auto; }
 .fiche-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #f1f3f5; padding-bottom: 20px; margin-bottom: 25px; }
@@ -188,7 +222,6 @@ onMounted(() => {
 .fiche-content-box { background: #f8f9fa; border: 1px solid #e9ecef; padding: 15px; border-radius: 6px; color: #4f5f6f; line-height: 1.6; }
 .items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
 .associated-item-badge { display: flex; align-items: center; gap: 12px; background: #f4f7f9; border: 1px solid #dce5ec; padding: 10px 15px; border-radius: 6px; }
-.item-icon { font-size: 1.5rem; }
 .item-meta { display: flex; flex-direction: column; }
 .item-name { color: #2c3e50; font-size: 0.9rem; font-weight: bold; }
 .item-type-label { font-size: 0.75rem; color: #7f8c8d; }
@@ -198,9 +231,10 @@ onMounted(() => {
 .total-row { font-weight: bold; background: #fff9f9; color: #c0392b; font-size: 1rem; }
 .total-row td { border-top: 2px solid #f9d5d5; padding: 15px 12px; }
 .empty-state { height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #7f8c8d; text-align: center; padding: 40px; }
-.empty-icon { font-size: 4rem; margin-bottom: 15px; }
 .empty-sub-section { background: #fafafa; border: 1px dashed #e9ecef; padding: 15px; text-align: center; color: #95a5a6; border-radius: 4px; font-size: 0.9rem; }
 .loading-box, .loading-box-sm { color: #7f8c8d; padding: 10px; text-align: center; font-size: 0.9rem; }
-.btn-secondary { padding: 10px 20px; background-color: #7f8c8d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px; }
 
+.navigation-footer { padding: 15px; background: #ffffff; border-top: 1px solid #e9ecef; }
+.btn-secondary { padding: 10px 20px; background-color: #7f8c8d; color: white; border: none; border-radius: 4px; cursor: pointer; }
+.btn-secondary:hover { background-color: #6c757d; }
 </style>

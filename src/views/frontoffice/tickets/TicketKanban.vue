@@ -6,9 +6,18 @@
         <p class="subtitle">Gestion visuelle des tickets de support GLPI</p>
       </div>
       <button @click="refreshBoard" class="refresh-btn" :disabled="isLoading">
-        <span v-if="isLoading">⏳ Chargement...</span>
+        <span v-if="isLoading">Chargement...</span>
         <span v-else>Actualiser</span>
       </button>
+    </div>
+
+    <div class="search-container">
+      <input 
+        v-model="searchQuery" 
+        type="text" 
+        placeholder="Rechercher un ticket par titre ou numéro (#125)..." 
+        class="search-input"
+      />
     </div>
 
     <div v-if="!isLoading" class="kanban-board">
@@ -83,12 +92,13 @@ import { ref, onMounted, reactive, watch } from 'vue'
 import draggable from 'vuedraggable'
 import { useTicketsManager } from '@/composables/useTicketsManager'
 import TicketCreateModal from '@/components/front/tickets/TicketCreateModal.vue'
-import TicketDetailModal from '@/components/front/tickets/TicketDetailModal.vue' // Nouvelle modale importée
+import TicketDetailModal from '@/components/front/tickets/TicketDetailModal.vue'
 
 const { tickets, isLoading, loadTickets, updateTicketStatus, selectTicket } = useTicketsManager()
 
 const showCreateModal = ref(false)
 const showDetailModal = ref(false)
+const searchQuery = ref('') // Variable réactive pour mémoriser la saisie
 
 const columnsConfig = [
   { id: 1, title: 'Nouveau', color: '#0ea5e9', bg: '#f0f9ff', textColor: '#0369a1', badgeBg: 'rgba(14, 165, 233, 0.15)' },
@@ -98,13 +108,31 @@ const columnsConfig = [
 
 const boardLists = reactive({ 1: [], 2: [], 5: [] })
 
+/**
+ * Filtre les tickets globaux selon la recherche actuelle et les répartit dans les colonnes
+ */
 const dispatchTicketsToBoard = () => {
-  boardLists[1] = tickets.value.filter(t => parseInt(t.status) === 1)
-  boardLists[2] = tickets.value.filter(t => parseInt(t.status) === 2 || parseInt(t.status) === 3)
-  boardLists[5] = tickets.value.filter(t => parseInt(t.status) === 5 || parseInt(t.status) === 6)
+  // 1. Filtrage par titre ou par ID
+  const filtered = tickets.value.filter(t => {
+    const query = searchQuery.value.toLowerCase().trim()
+    if (!query) return true // Pas de recherche : on garde tout
+    
+    const matchesTitle = t.name ? t.name.toLowerCase().includes(query) : false
+    const matchesId = t.id ? t.id.toString().includes(query.replace('#', '')) : false
+    
+    return matchesTitle || matchesId
+  })
+
+  // 2. Répartition dans les colonnes Kanban réactives
+  boardLists[1] = filtered.filter(t => parseInt(t.status) === 1)
+  boardLists[2] = filtered.filter(t => parseInt(t.status) === 2 || parseInt(t.status) === 3)
+  boardLists[5] = filtered.filter(t => parseInt(t.status) === 5 || parseInt(t.status) === 6)
 }
 
-watch(tickets, () => { dispatchTicketsToBoard() }, { deep: true })
+// Relancer le dispatch dès que la liste des tickets change, ou que la recherche est modifiée
+watch([tickets, searchQuery], () => { 
+  dispatchTicketsToBoard() 
+}, { deep: true })
 
 const handleCardMove = async (event, targetStatusId) => {
   if (!event.added) return
@@ -117,10 +145,6 @@ const handleCardMove = async (event, targetStatusId) => {
   }
 }
 
-/**
- * Charge les dépendances GLPI du ticket ciblé (frais, équipements) via le composable,
- * puis bascule l'affichage sur la modale de détails.
- */
 const handleOpenDetails = async (ticket) => {
   showDetailModal.value = true
   await selectTicket(ticket)
@@ -142,12 +166,17 @@ onMounted(() => {
 
 <style scoped>
 .kanban-page { padding: 30px; background-color: #f1f5f9; min-height: 100vh; font-family: sans-serif; }
-.kanban-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+.kanban-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .kanban-header h2 { font-size: 1.8rem; color: #1e293b; margin: 0; font-weight: 700; }
 .subtitle { margin: 4px 0 0 0; font-size: 0.95rem; color: #64748b; }
 
 .refresh-btn { padding: 10px 18px; background: #1e293b; color: #ffffff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
 .refresh-btn:hover { background: #334155; }
+
+/* Styles pour la nouvelle barre de recherche */
+.search-container { margin-bottom: 25px; max-width: 500px; }
+.search-input { width: 100%; padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem; color: #1e293b; background-color: #ffffff; outline: none; transition: all 0.15s ease-in-out; }
+.search-input:focus { border-color: #1e293b; box-shadow: 0 0 0 3px rgba(30, 41, 59, 0.08); }
 
 .kanban-board { display: flex; gap: 24px; align-items: flex-start; overflow-x: auto; padding-bottom: 20px; }
 .kanban-column { flex: 1; min-width: 320px; background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; max-height: 80vh; overflow: hidden; }
