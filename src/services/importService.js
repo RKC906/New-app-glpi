@@ -32,20 +32,13 @@ export const importService = {
 
   /**
    * 🖥️ 📱 🖨️ Importation d'une ligne d'inventaire du Parc (Fichier CSV 1 - Multi-modules)
-   * @param {Object} csvRow - Une ligne du CSV 1
    */
   async importAssetRow(csvRow) {
-    // 1. Détection dynamique de l'endpoint GLPI cible basé sur la colonne 'Item_Type'
-    // Si la colonne dit "Computer", l'endpoint sera "/Computer". Si c'est "Monitor" -> "/Monitor", etc.
     const targetModule = csvRow.Item_Type ? csvRow.Item_Type.trim() : 'Computer'
-    
     console.log(`⏳ Traitement de l'équipement [${targetModule}] : ${csvRow.Name}...`)
 
-    // 2. Détermination de la table de modèle appropriée selon le module
-    // Dans GLPI, le modèle de Computer est 'ComputerModel', pour Monitor c'est 'MonitorModel', etc.
     const modelEndpoint = `${targetModule}Model`
 
-    // 3. Résolution des IDs des Dropdowns en parallèle
     const [
       locations_id,
       manufacturers_id,
@@ -54,29 +47,25 @@ export const importService = {
     ] = await Promise.all([
       this.findOrCreateDropdownItem('Location', csvRow.Location),
       this.findOrCreateDropdownItem('Manufacturer', csvRow.Manufacturer),
-      this.findOrCreateDropdownItem(modelEndpoint, csvRow.Model), // S'adapte automatiquement (ex: MonitorModel)
+      this.findOrCreateDropdownItem(modelEndpoint, csvRow.Model),
       this.findOrCreateDropdownItem('State', csvRow.Status)
     ])
 
-    // 4. Préparation du payload universel GLPI
     const assetInput = {
       input: {
         name: csvRow.Name,
         locations_id: locations_id,
         manufacturers_id: manufacturers_id,
         states_id: states_id,
-        otherserial: csvRow.Inventory_Number, // Numéro d'inventaire
-        contact: csvRow.User // Sécurité : évite l'erreur 400 en écrivant dans le contact texte libre
+        otherserial: csvRow.Inventory_Number,
+        contact: csvRow.User
       }
     }
 
-    // Pièce spécifique : GLPI stocke la clé du modèle sous un nom dynamique en bdd
-    // Exemple : pour un Computer c'est 'computermodels_id', pour un Monitor c'est 'monitormodels_id'
     const modelKey = `${targetModule.toLowerCase()}models_id`
     assetInput.input[modelKey] = assetmodels_id
 
     try {
-      // 5. Envoi dynamique sur l'endpoint détecté (/Computer, /Monitor, /Printer, etc.)
       const response = await api.post(`/${targetModule}`, assetInput)
       console.log(`✅ [${targetModule}] ${csvRow.Name} importé avec l'ID GLPI : ${response.data.id}`)
       return response.data
@@ -102,22 +91,18 @@ export const importService = {
     const [day, month, year] = row.Date.split('/')
     const formattedDate = `${year}-${month}-${day} ${row.Heure}:00`
 
-// Dans src/services/importService.js -> importTicketRow(row)
-
-const ticketInput = {
-  input: {
-    name: row.Titre,
-    content: row.Description,
-    date: formattedDate,
-    type: row.Type.toLowerCase() === 'incident' ? 1 : 2,
-    status: 1,
-    priority: row.Priority.toLowerCase() === 'medium' ? 3 : 3,
-    
-    // 🌟 On mappe la Ref du CSV directement dans le champ natif GLPI
-    id_search_option: String(row.Ref_Ticket).trim(),
-    external_identifier: String(row.Ref_Ticket).trim()
-  }
-}
+    const ticketInput = {
+      input: {
+        name: row.Titre,
+        content: row.Description,
+        date: formattedDate,
+        type: row.Type.toLowerCase() === 'incident' ? 1 : 2,
+        status: 1,
+        priority: row.Priority.toLowerCase() === 'medium' ? 3 : 3,
+        id_search_option: String(row.Ref_Ticket).trim(),
+        external_identifier: String(row.Ref_Ticket).trim()
+      }
+    }
 
     const { data } = await api.post('/Ticket', ticketInput)
     console.log(`✅ Ticket créé avec succès (ID GLPI: ${data.id})`)
@@ -154,99 +139,82 @@ const ticketInput = {
     return data
   },
 
-/**
- * 🔀 Importe une ligne de coût de ticket (Fichier CSV 3)
- */
-async importTicketCostRow(csvRow) {
-  const csvRef = String(csvRow.Num_Ticket || csvRow.num_ticket).trim()
-  
-  // 🌟 1. On interroge l'endpoint étendu de GLPI pour récupérer TOUS les détails du ticket
-  const searchRes = await api.get('/Ticket', {
-    params: {
-      searchText: csvRef,
-      expand_dropdowns: true // Force GLPI à retourner les champs complexes et liaisons externes
+  /**
+   * 🔀 Importe une ligne de coût de ticket (Fichier CSV 3)
+   */
+  async importTicketCostRow(csvRow) {
+    const csvRef = String(csvRow.Num_Ticket || csvRow.num_ticket).trim()
+    
+    const searchRes = await api.get('/Ticket', {
+      params: {
+        searchText: csvRef,
+        expand_dropdowns: true
+      }
+    })
+
+    const tickets = Array.isArray(searchRes.data) ? searchRes.data : []
+
+    const realTicket = tickets.find(t => {
+      const extId = t.external_identifier || t.id_search_option
+      return extId && String(extId).trim() === csvRef
+    })
+
+    const fallbackTicket = realTicket || tickets[0] 
+
+    if (!fallbackTicket) {
+      throw new Error(`Impossible de localiser le ticket GLPI lié à l'identifiant externe #${csvRef}.`)
     }
-  })
 
-  const tickets = Array.isArray(searchRes.data) ? searchRes.data : []
+    const realGlpiId = fallbackTicket.id
+    console.log(`🎯 Liaison validée via l'Identifiant Externe ! Ref: ${csvRef} ==> ID GLPI: ${realGlpiId}`)
 
-  // 🌟 2. On cherche le ticket dont l'identifiant externe correspond parfaitement
-  const realTicket = tickets.find(t => {
-    const extId = t.external_identifier || t.id_search_option
-    return extId && String(extId).trim() === csvRef
-  })
+    const rawTimeCost = csvRow.Time_Cost || csvRow.time_cost || "0"
+    const cleanTimeCost = parseFloat(String(rawTimeCost).replace(',', '.').trim()) || 0
 
-  // 🛠️ SÉCURITÉ DE SECOURS : Si GLPI refuse toujours de renvoyer la colonne en GET,
-  // on utilise l'endpoint de recherche textuelle brute qui scanne aussi l'identifiant externe
-  const fallbackTicket = realTicket || tickets[0] 
+    const rawFixedCost = csvRow.Fixed_Cost || csvRow.fixed_cost || "0"
+    const cleanFixedCost = parseFloat(String(rawFixedCost).replace(',', '.').trim()) || 0
 
-  if (!fallbackTicket) {
-    throw new Error(`Impossible de localiser le ticket GLPI lié à l'identifiant externe #${csvRef}.`);
-  }
-
-  const realGlpiId = fallbackTicket.id
-  console.log(`🎯 Liaison validée via l'Identifiant Externe ! Ref: ${csvRef} ==> ID GLPI: ${realGlpiId}`)
-
-  // 3. Traitement des coûts (nettoyage de la virgule)
-  const rawTimeCost = csvRow.Time_Cost || csvRow.time_cost || "0"
-  const cleanTimeCost = parseFloat(String(rawTimeCost).replace(',', '.').trim()) || 0
-
-  const rawFixedCost = csvRow.Fixed_Cost || csvRow.fixed_cost || "0"
-  const cleanFixedCost = parseFloat(String(rawFixedCost).replace(',', '.').trim()) || 0
-
-  // 4. Payload final envoyé à GLPI
-  const payload = {
-    input: {
-      tickets_id: realGlpiId, 
-      actiontime: parseInt(csvRow.Duration_second || csvRow.duration_second || 0),
-      cost_time: cleanTimeCost,
-      cost_fixed: cleanFixedCost,
-      name: "Coût importé via Identifiant Externe"
+    const payload = {
+      input: {
+        tickets_id: realGlpiId, 
+        actiontime: parseInt(csvRow.Duration_second || csvRow.duration_second || 0),
+        cost_time: cleanTimeCost,
+        cost_fixed: cleanFixedCost,
+        name: "Coût importé via Identifiant Externe"
+      }
     }
-  }
 
-  return await api.post('/TicketCost', payload)
-},
+    return await api.post('/TicketCost', payload)
+  },
 
   /**
-   * 🖼️ Étape A : Envoyer l'image brute à GLPI pour créer un "Document"
-   * @param {Blob} fileBlob - Le fichier image binaire extrait du ZIP
-   * @param {string} fileName - Le nom du fichier (ex: PC-ADM-001.png)
+   * 🖼️ Étape A (Ancienne méthode) : Envoyer l'image brute à GLPI pour créer un "Document"
    */
   async uploadImageAsDocument(fileBlob, fileName) {
-    console.log(`⏳ Téléversement de l'image : ${fileName}...`)
+    console.log(`⏳ Téléversement de l'image (Méthode classique) : ${fileName}...`)
 
-    // Pour envoyer un fichier binaire via Axios, on utilise obligatoirement FormData
     const formData = new FormData()
-    
-    // Structure obligatoire attendue par l'API GLPI pour les documents
     formData.append('uploadManifest', JSON.stringify({
       input: {
-        name: `Photo ${fileName.split('.')[0]}`, // Libellé du document dans GLPI
+        name: `Photo ${fileName.split('.')[0]}`,
         filename: fileName
       }
     }))
     formData.append('filename[]', fileBlob, fileName)
 
-    // Envoi du POST multipart vers l'endpoint /Document
     const { data } = await api.post('/Document', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
 
-    return data.id // On retourne l'ID du document créé (ex: 78)
+    return data.id
   },
 
   /**
-   * ⛓️ Étape B : Lier le Document à la bonne machine (Computer ou Monitor)
-   * @param {string} imageName - Le nom de l'image sans extension (ex: "MN-FORM-002")
-   * @param {Blob} fileBlob - Le fichier image binaire
-   * @param {string} fullFileName - Le nom complet (ex: "MN-FORM-002.png")
+   * ⛓️ Étape B (Ancienne méthode) : Lier le Document à la bonne machine (Computer ou Monitor)
    */
   async importImageLink(imageName, fileBlob, fullFileName) {
-    // 1. Détection dynamique du type de matériel (comme pour les tickets)
     const type = imageName.startsWith('MN-') ? 'Monitor' : 'Computer'
 
-    // 2. Recherche de la machine dans GLPI pour récupérer son ID numérique
     const searchRes = await api.get(`/${type}`, { params: { searchText: imageName } })
     const item = searchRes.data.find(i => i.name === imageName)
 
@@ -255,10 +223,8 @@ async importTicketCostRow(csvRow) {
       return
     }
 
-    // 3. Téléversement de la photo et récupération de l'ID du document
     const documentId = await this.uploadImageAsDocument(fileBlob, fullFileName)
 
-    // 4. Création de la liaison dans la table intermédiaire Document_Item
     await api.post('/Document_Item', {
       input: {
         documents_id: documentId,
@@ -268,5 +234,95 @@ async importTicketCostRow(csvRow) {
     })
 
     console.log(`✅ Image ${fullFileName} associée avec succès au matériel [${type}] (ID: ${item.id})`)
+  },
+
+  /**
+   * 📸 NOUVELLE MÉTHODE (Convertie en JS) : Envoie une image avec inspection des Magic Bytes et liaison Fetch directe
+   * @param {string} imageName - Le nom de l'équipement (ex: "PC-ADM-001")
+   * @param {File|Blob} file - Le fichier binaire extrait du ZIP
+   * @param {string} fullFileName - Le nom complet d'origine (ex: "PC-ADM-001.png")
+   */
+  async uploadImageWithMagicBytes(imageName, file, fullFileName) {
+    console.log(`⏳ Analyse Magic Bytes & Téléversement Fetch pour : ${fullFileName}...`)
+
+    // 1. Détection du type de matériel
+    const itemType = imageName.startsWith('MN-') ? 'Monitor' : 'Computer'
+
+    // 2. Recherche du matériel dans GLPI
+    const searchRes = await api.get(`/${itemType}`, { params: { searchText: imageName } })
+    const item = searchRes.data.find(i => i.name === imageName)
+
+    if (!item) {
+      console.warn(`⚠️ Impossible d'importer l'image : Le matériel "${imageName}" n'existe pas dans GLPI.`)
+      return
+    }
+
+    // 3. 🔍 INSPECTION DES MAGIC BYTES (Le véritable type)
+    const headerBuffer = await file.slice(0, 4).arrayBuffer()
+    const bytes = new Uint8Array(headerBuffer)
+    
+    let realMimeType = file.type || 'image/png'
+    let realExtension = fullFileName.split('.').pop().toLowerCase() || 'png'
+
+    // Signature JPEG : FF D8 FF
+    if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) {
+      realMimeType = 'image/jpeg'
+      realExtension = 'jpeg'
+    } 
+    // Signature PNG : 89 50 4E 47
+    else if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
+      realMimeType = 'image/png'
+      realExtension = 'png'
+    }
+
+    // 4. 🛠️ CORRECTION AUTOMATIQUE EN CAS DE MISMATCH
+    let finalFile = file
+    let finalFileName = fullFileName
+
+    if (!fullFileName.toLowerCase().endsWith(`.${realExtension}`)) {
+      const baseName = fullFileName.substring(0, fullFileName.lastIndexOf('.'))
+      finalFileName = `${baseName}.${realExtension}`
+      
+      // On recrée un fichier binaire propre avec le bon type MIME
+      finalFile = new File([file], finalFileName, { type: realMimeType })
+      console.warn(`🔄 Correction auto : ${fullFileName} était un faux fichier. Renommé en ${finalFileName}`)
+    }
+
+    // 5. 📦 PRÉPARATION DU FORMDATA
+    const formData = new FormData()
+    formData.append('uploadManifest', JSON.stringify({
+      input: {
+        name: `Photo - ${finalFileName}`,
+        items_id: item.id,
+        itemtype: itemType, 
+        _filename: [finalFileName]
+      }
+    }))
+    
+    formData.append('filename[]', finalFile, finalFileName)
+
+    // 6. 🔥 EXTRACT DES TOKENS DEPUIS CONFIG AXIOS POUR LE FETCH SÉCURISÉ
+    const baseURL = api.defaults.baseURL || ''
+    const sessionToken = api.defaults.headers['Session-Token']
+    const appToken = api.defaults.headers.common['App-Token'] || api.defaults.headers['App-Token'] || ''
+
+    // 7. 🔥 ENVOI SÉCURISÉ VIA FETCH DIRECT
+    const response = await fetch(`${baseURL}/Document`, {
+      method: 'POST',
+      headers: {
+        'Session-Token': localStorage.getItem('glpi_session_token'),
+        'App-Token': import.meta.env.VITE_GLPI_APP_TOKEN
+      },
+      body: formData
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Erreur HTTP GLPI ${response.status}: ${errorText}`)
+    }
+
+    const data = await response.json()
+    console.log(`✅ Image ${finalFileName} associée par Magic Bytes avec succès ! (Document ID: ${data.id})`)
+    return data
   }
 }
