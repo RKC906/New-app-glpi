@@ -1,180 +1,164 @@
 <template>
-    <div>
-    <RouterLink :to="{ name: 'home' }">
-        <button class="btn-secondary">Retour a la liste</button>
-    </RouterLink><
+  <div class="kanban-page">
+    <div class="kanban-header">
+      <div class="header-left">
+        <h2>Tableau de Bord Kanban</h2>
+        <p class="subtitle">Gestion visuelle des tickets de support GLPI</p>
+      </div>
+      <button @click="refreshBoard" class="refresh-btn" :disabled="isLoading">
+        <span v-if="isLoading">⏳ Chargement...</span>
+        <span v-else>Actualiser</span>
+      </button>
     </div>
-  <div class="create-ticket-container">
-    <h2>🎫 Ouvrir un Nouveau Ticket d'Assistance</h2>
-    <p class="subtitle">Créez une intervention et associez-y un ou plusieurs équipements du parc informatique.</p>
 
-    <form @submit.prevent="submitAndRedirect" class="ticket-grid-form">
+    <div v-if="!isLoading" class="kanban-board">
       
-      <div class="form-main-card">
-        <div class="form-group">
-          <label for="title">🎯 Titre de l'intervention</label>
-          <input 
-            id="title"
-            v-model="ticketForm.name" 
-            type="text" 
-            placeholder="Ex: Écran noir au démarrage ou demande d'installation de logiciel"
-            required
-          />
+      <div 
+        v-for="column in columnsConfig" 
+        :key="column.id" 
+        class="kanban-column"
+      >
+        <div class="column-header" :style="{ borderTopColor: column.color, backgroundColor: column.bg }">
+          <h3 :style="{ color: column.textColor }">{{ column.title }}</h3>
+          <span class="ticket-count" :style="{ backgroundColor: column.badgeBg, color: column.textColor }">
+            {{ boardLists[column.id]?.length || 0 }}
+          </span>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label for="type">📌 Type</label>
-            <select id="type" v-model="ticketForm.type">
-              <option value="1">🔴 Incident (Panne / Dysfonctionnement)</option>
-              <option value="2">🟢 Demande (Besoin / Service / Matériel)</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="priority">⚡ Priorité</label>
-            <select id="priority" v-model="ticketForm.priority">
-              <option value="1">Très Basse</option>
-              <option value="2">Basse</option>
-              <option value="3">Moyenne</option>
-              <option value="4">Haute</option>
-              <option value="5">Très Haute</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="content">📝 Description détaillée du problème</label>
-          <textarea 
-            id="content"
-            v-model="ticketForm.content" 
-            rows="8" 
-            placeholder="Décrivez précisément les symptômes constatés ou la nature de votre demande..."
-            required
-          ></textarea>
-        </div>
-
-        <button type="submit" :disabled="isSubmitting" class="btn-submit-ticket">
-          {{ isSubmitting ? 'Enregistrement GLPI en cours...' : '🚀 Enregistrer le Ticket' }}
-        </button>
-      </div>
-
-      <div class="form-sidebar-card">
-        <h3 class="section-title">🔌 Équipements du parc associés</h3>
-        <p class="section-desc">Sélectionnez le ou les matériels concernés par ce ticket d'assistance.</p>
-
-        <div class="asset-selector-box">
-          <label>🔍 Rechercher et ajouter un élément</label>
-          <select @change="e => { addAssetToTicket(e.target.value); e.target.value = ''; }" :disabled="isLoading">
-            <option value="">-- Choisir un équipement à ajouter --</option>
-            <option v-for="asset in availableAssets" :key="asset.itemtype + '-' + asset.id" :value="asset.id">
-              {{ getItemIcon(asset.itemtype) }} {{ asset.name || 'Sans Nom' }} ({{ asset.itemtype }} #{{ asset.id }})
-            </option>
-          </select>
-        </div>
-
-        <div class="selected-assets-list">
-          <h4>📦 Matériels rattachés ({{ selectedAssets.length }})</h4>
-          
-          <div v-if="selectedAssets.length === 0" class="empty-assets-pane">
-            Aucun équipement associé pour le moment. Le ticket sera généré comme "Général".
-          </div>
-
-          <div v-else class="assets-scroll-zone">
-            <div v-for="(asset, index) in selectedAssets" :key="'selected-' + index" class="asset-selected-row">
-              <span class="asset-row-icon">{{ getItemIcon(asset.itemtype) }}</span>
-              <div class="asset-row-info">
-                <strong>{{ asset.name || 'Équipement sans nom' }}</strong>
-                <span>{{ asset.itemtype }} (ID GLPI: #{{ asset.id }})</span>
+        <draggable
+          v-model="boardLists[column.id]"
+          group="tickets"
+          item-key="id"
+          class="column-cards-zone"
+          ghost-class="ghost-card"
+          @change="(evt) => handleCardMove(evt, column.id)"
+        >
+          <template #item="{ element }">
+            <div class="ticket-card" :key="element.id" @click="selectTicket(element)">
+              <div class="card-header-tags">
+                <span class="ticket-id">#{{ element.id }}</span>
+                <span class="priority-tag" :class="'prio-' + element.priority">
+                  P{{ element.priority }}
+                </span>
               </div>
-              <button type="button" @click="removeAssetFromTicket(index)" class="btn-remove-asset" title="Détacher">
-                ❌
-              </button>
+              <h4 class="card-title">{{ element.name || 'Sans titre' }}</h4>
+              <div class="card-footer">
+                <span class="card-date">
+                  {{ element.date ? new Date(element.date).toLocaleDateString('fr-FR', {day: 'numeric', month: 'short'}) : 'N/A' }}
+                </span>
+              </div>
             </div>
-          </div>
+          </template>
+        </draggable>
+
+        <div v-if="column.id === 1" class="column-footer">
+          <button @click="showCreateModal = true" class="btn-add-ticket">
+            + Ajouter un ticket
+          </button>
         </div>
       </div>
 
-    </form>
+    </div>
+
+    <div v-else class="loading-state">
+      <div class="spinner"></div>
+      <p>Synchronisation en temps réel avec vos modules GLPI...</p>
+    </div>
+
+    <TicketCreateModal 
+      v-if="showCreateModal" 
+      @close="showCreateModal = false"
+      @success="handleTicketCreated"
+    />
   </div>
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
-import { useTickets } from '@/composables/useTickets'
+import { ref, onMounted, reactive, watch } from 'vue'
+import draggable from 'vuedraggable'
+import { useTicketsManager } from '@/composables/useTicketsManager'
+import TicketCreateModal from '@/components/front/tickets/TicketCreateModal.vue' // Import de la nouvelle modale
 
-const {
-  isLoading,
-  isSubmitting,
-  availableAssets,
-  ticketForm,
-  selectedAssets,
-  loadAvailableAssets,
-  addAssetToTicket,
-  removeAssetFromTicket,
-  handleSubmitTicket,
-  getItemIcon
-} = useTickets()
+const { tickets, isLoading, loadTickets, updateTicketStatus, selectTicket } = useTicketsManager()
 
-/**
- * Soumet le formulaire et effectue une action si l'enregistrement réussit
- */
-const submitAndRedirect = async () => {
-  const success = await handleSubmitTicket()
-  if (success) {
-    // Optionnel : Tu peux rediriger l'utilisateur vers ta liste de tickets ici
-    // router.push('/admin/tickets')
+const showCreateModal = ref(false)
+
+const columnsConfig = [
+  { id: 1, title: 'Nouveau', color: '#0ea5e9', bg: '#f0f9ff', textColor: '#0369a1', badgeBg: 'rgba(14, 165, 233, 0.15)' },
+  { id: 2, title: 'En Cours', color: '#f59e0b', bg: '#fffaf0', textColor: '#b45309', badgeBg: 'rgba(245, 158, 11, 0.15)' },
+  { id: 5, title: 'Résolu', color: '#10b981', bg: '#f0fdf4', textColor: '#15803d', badgeBg: 'rgba(16, 185, 129, 0.15)' }
+]
+
+const boardLists = reactive({ 1: [], 2: [], 5: [] })
+
+const dispatchTicketsToBoard = () => {
+  boardLists[1] = tickets.value.filter(t => parseInt(t.status) === 1)
+  boardLists[2] = tickets.value.filter(t => parseInt(t.status) === 2 || parseInt(t.status) === 3)
+  boardLists[5] = tickets.value.filter(t => parseInt(t.status) === 5 || parseInt(t.status) === 6)
+}
+
+watch(tickets, () => { dispatchTicketsToBoard() }, { deep: true })
+
+const handleCardMove = async (event, targetStatusId) => {
+  if (!event.added) return
+  const targetTicket = event.added.element
+  try {
+    await updateTicketStatus(targetTicket.id, targetStatusId)
+    targetTicket.status = targetStatusId
+  } catch (error) {
+    refreshBoard()
   }
 }
 
-// Récupération des matériels dès l'ouverture de la page pour alimenter le dropdown
+const handleTicketCreated = () => {
+  showCreateModal.value = false
+  refreshBoard() // Recharge la liste globale pour voir apparaître le nouveau ticket
+}
+
+const refreshBoard = () => {
+  loadTickets()
+}
+
 onMounted(() => {
-  loadAvailableAssets()
+  loadTickets()
 })
 </script>
 
 <style scoped>
-.create-ticket-container { padding: 30px; max-width: 1200px; margin: 0 auto; font-family: sans-serif; background-color: #f8f9fa; min-height: 100vh; }
-h2 { color: #2c3e50; margin: 0 0 5px 0; }
-.subtitle { color: #7f8c8d; margin-bottom: 30px; font-size: 0.95rem; }
+.kanban-page { padding: 30px; background-color: #f1f5f9; min-height: 100vh; font-family: sans-serif; }
+.kanban-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+.kanban-header h2 { font-size: 1.8rem; color: #1e293b; margin: 0; font-weight: 700; }
+.subtitle { margin: 4px 0 0 0; font-size: 0.95rem; color: #64748b; }
 
-.ticket-grid-form { display: grid; grid-template-columns: 1fr 400px; gap: 30px; align-items: start; }
+.refresh-btn { padding: 10px 18px; background: #1e293b; color: #ffffff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+.refresh-btn:hover { background: #334155; }
 
-/* Formulaire principal (Gauche) */
-.form-main-card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
-.form-row { display: flex; gap: 20px; }
-.form-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; flex: 1; }
-.form-group label { font-size: 0.9rem; font-weight: bold; color: #34495e; }
-.form-group input, .form-group select, .form-group textarea { padding: 12px; border: 1px solid #dcdde1; border-radius: 6px; font-size: 0.95rem; color: #2f3640; outline: none; background-color: #fff; }
-.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #3498db; }
+.kanban-board { display: flex; gap: 24px; align-items: flex-start; overflow-x: auto; padding-bottom: 20px; }
+.kanban-column { flex: 1; min-width: 320px; background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; max-height: 80vh; overflow: hidden; }
 
-.btn-submit-ticket { width: 100%; background-color: #3498db; color: white; border: none; padding: 14px; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: background 0.2s; margin-top: 10px; }
-.btn-submit-ticket:hover { background-color: #2980b9; }
-.btn-submit-ticket:disabled { background-color: #95a5a6; cursor: not-allowed; }
+.column-header { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-top: 4px solid #ccc; }
+.column-header h3 { margin: 0; font-size: 1.05rem; font-weight: 700; }
+.ticket-count { padding: 2px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; }
 
-/* Sidebar d'association (Droite) */
-.form-sidebar-card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border-top: 4px solid #2ecc71; }
-.section-title { margin: 0 0 5px 0; font-size: 1.1rem; color: #2c3e50; }
-.section-desc { font-size: 0.8rem; color: #95a5a6; margin-bottom: 20px; line-height: 1.4; }
+.column-cards-zone { flex: 1; overflow-y: auto; padding: 16px; min-height: 150px; display: flex; flex-direction: column; gap: 14px; }
 
-.asset-selector-box { display: flex; flex-direction: column; gap: 6px; margin-bottom: 25px; }
-.asset-selector-box label { font-size: 0.85rem; font-weight: bold; color: #7f8c8d; }
-.asset-selector-box select { padding: 10px; border: 1px solid #dcdde1; border-radius: 6px; font-size: 0.9rem; background-color: #f9f9f9; width: 100%; }
+.ticket-card { background: #ffffff; padding: 16px; border-radius: 8px; border: 1px solid #f1f5f9; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02); cursor: grab; }
+.ticket-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05); border-color: #e2e8f0; transition: transform 0.15s; }
 
-/* Panier d'assets */
-.selected-assets-list h4 { margin: 0 0 10px 0; font-size: 0.9rem; color: #34495e; text-transform: uppercase; letter-spacing: 0.5px; }
-.empty-assets-pane { background: #fafafa; border: 1px dashed #dcdde1; padding: 20px; text-align: center; color: #95a5a6; border-radius: 6px; font-size: 0.85rem; }
+.card-header-tags { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.ticket-id { font-size: 0.8rem; font-weight: 700; color: #94a3b8; }
+.priority-tag { padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; background: #e2e8f0; color: #475569; }
+.prio-4, .prio-5 { background: #fee2e2; color: #dc2626; }
 
-.assets-scroll-zone { display: flex; flex-direction: column; gap: 10px; max-height: 320px; overflow-y: auto; }
-.asset-selected-row { display: flex; align-items: center; gap: 12px; background: #f4f7f9; border: 1px solid #dce5ec; padding: 10px 12px; border-radius: 6px; }
-.asset-row-icon { font-size: 1.4rem; }
-.asset-row-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-.asset-row-info strong { font-size: 0.85rem; color: #2c3e50; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.asset-row-info span { font-size: 0.75rem; color: #7f8c8d; }
-.btn-remove-asset { background: none; border: none; cursor: pointer; padding: 5px; font-size: 0.8rem; filter: grayscale(1); }
-.btn-remove-asset:hover { filter: grayscale(0); }
+.card-title { margin: 0 0 12px 0; font-size: 0.95rem; color: #334155; font-weight: 600; line-height: 1.5; }
+.card-footer { font-size: 0.8rem; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 10px; }
 
-@media (max-width: 900px) {
-  .ticket-grid-form { grid-template-columns: 1fr; }
-}
+.column-footer { padding: 12px 16px; border-top: 1px solid #e2e8f0; background-color: #ffffff; }
+.btn-add-ticket { w: 100%; width: 100%; padding: 10px; background: none; border: 1px dashed #cbd5e1; border-radius: 6px; color: #64748b; font-weight: 600; cursor: pointer; transition: all 0.2s; text-align: center; }
+.btn-add-ticket:hover { background-color: #f1f5f9; color: #1e293b; border-color: #94a3b8; }
+
+.ghost-card { opacity: 0.3; background-color: #cbd5e1 !important; border: 2px dashed #94a3b8 !important; box-shadow: none !important; }
+.loading-state { text-align: center; padding: 60px 0; color: #64748b; }
+.spinner { width: 45px; height: 45px; border: 4px solid #e2e8f0; border-top-color: #1e293b; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px auto; }
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>

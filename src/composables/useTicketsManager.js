@@ -2,15 +2,16 @@ import { ref, computed } from 'vue'
 import api from '@/services/api'
 import { dashboardService } from '@/services/dashboardService'
 
+const isLoading = ref(false)
+const isLoadingDetails = ref(false)
+const tickets = ref([])
+const selectedTicket = ref(null)
+
+// Sous-données de la fiche sélectionnée
+const associatedItems = ref([])
+const ticketCosts = ref([])
+
 export function useTicketsManager() {
-  const isLoading = ref(false)
-  const isLoadingDetails = ref(false)
-  const tickets = ref([])
-  const selectedTicket = ref(null)
-  
-  // Sous-données de la fiche sélectionnée
-  const associatedItems = ref([])
-  const ticketCosts = ref([])
 
   /**
    * 📡 Charge la liste des tickets depuis le service

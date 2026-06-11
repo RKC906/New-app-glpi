@@ -2,12 +2,12 @@
   <div class="kanban-page">
     <div class="kanban-header">
       <div class="header-left">
-        <h2>📋 Tableau de Bord Kanban</h2>
+        <h2>Tableau de Bord Kanban</h2>
         <p class="subtitle">Gestion visuelle des tickets de support GLPI</p>
       </div>
       <button @click="refreshBoard" class="refresh-btn" :disabled="isLoading">
         <span v-if="isLoading">⏳ Chargement...</span>
-        <span v-else><i class="fa-solid fa-rotate"></i> Actualiser</span>
+        <span v-else>Actualiser</span>
       </button>
     </div>
 
@@ -34,26 +34,28 @@
           @change="(evt) => handleCardMove(evt, column.id)"
         >
           <template #item="{ element }">
-            <div class="ticket-card" :key="element.id" @click="selectTicket(element)">
-              
+            <div class="ticket-card" :key="element.id" @click="handleOpenDetails(element)">
               <div class="card-header-tags">
                 <span class="ticket-id">#{{ element.id }}</span>
                 <span class="priority-tag" :class="'prio-' + element.priority">
                   P{{ element.priority }}
                 </span>
               </div>
-
               <h4 class="card-title">{{ element.name || 'Sans titre' }}</h4>
-              
               <div class="card-footer">
                 <span class="card-date">
-                  📅 {{ element.date ? new Date(element.date).toLocaleDateString('fr-FR', {day: 'numeric', month: 'short'}) : 'N/A' }}
+                  {{ element.date ? new Date(element.date).toLocaleDateString('fr-FR', {day: 'numeric', month: 'short'}) : 'N/A' }}
                 </span>
               </div>
-
             </div>
           </template>
         </draggable>
+
+        <div v-if="column.id === 1" class="column-footer">
+          <button @click="showCreateModal = true" class="btn-add-ticket">
+            + Ajouter un ticket
+          </button>
+        </div>
       </div>
 
     </div>
@@ -62,61 +64,71 @@
       <div class="spinner"></div>
       <p>Synchronisation en temps réel avec vos modules GLPI...</p>
     </div>
+
+    <TicketCreateModal 
+      v-if="showCreateModal" 
+      @close="showCreateModal = false"
+      @success="handleTicketCreated"
+    />
+
+    <TicketDetailModal 
+      v-if="showDetailModal"
+      @close="showDetailModal = false"
+    />
   </div>
 </template>
 
 <script setup>
-import { onMounted, reactive, watch } from 'vue'
+import { ref, onMounted, reactive, watch } from 'vue'
 import draggable from 'vuedraggable'
 import { useTicketsManager } from '@/composables/useTicketsManager'
+import TicketCreateModal from '@/components/front/tickets/TicketCreateModal.vue'
+import TicketDetailModal from '@/components/front/tickets/TicketDetailModal.vue' // Nouvelle modale importée
 
-// Extraction des outils du composable existant
 const { tickets, isLoading, loadTickets, updateTicketStatus, selectTicket } = useTicketsManager()
 
-// Configuration stricte à 3 colonnes
+const showCreateModal = ref(false)
+const showDetailModal = ref(false)
+
 const columnsConfig = [
   { id: 1, title: 'Nouveau', color: '#0ea5e9', bg: '#f0f9ff', textColor: '#0369a1', badgeBg: 'rgba(14, 165, 233, 0.15)' },
   { id: 2, title: 'En Cours', color: '#f59e0b', bg: '#fffaf0', textColor: '#b45309', badgeBg: 'rgba(245, 158, 11, 0.15)' },
   { id: 5, title: 'Résolu', color: '#10b981', bg: '#f0fdf4', textColor: '#15803d', badgeBg: 'rgba(16, 185, 129, 0.15)' }
 ]
 
-// Objet réactif qui sert de source de vérité locale pour les colonnes vuedraggable
-const boardLists = reactive({
-  1: [],
-  2: [],
-  5: []
-})
+const boardLists = reactive({ 1: [], 2: [], 5: [] })
 
-/**
- * Répartit les tickets du composable global dans nos 3 listes locales
- */
 const dispatchTicketsToBoard = () => {
   boardLists[1] = tickets.value.filter(t => parseInt(t.status) === 1)
-  boardLists[2] = tickets.value.filter(t => parseInt(t.status) === 2 || parseInt(t.status) === 3) // Prend en cours + planifié si besoin
-  boardLists[5] = tickets.value.filter(t => parseInt(t.status) === 5 || parseInt(t.status) === 6) // Prend résolu + clos si besoin
+  boardLists[2] = tickets.value.filter(t => parseInt(t.status) === 2 || parseInt(t.status) === 3)
+  boardLists[5] = tickets.value.filter(t => parseInt(t.status) === 5 || parseInt(t.status) === 6)
 }
 
-// Observe les changements du tableau de tickets global (chargement initial ou refresh)
-watch(tickets, () => {
-  dispatchTicketsToBoard()
-}, { deep: true })
+watch(tickets, () => { dispatchTicketsToBoard() }, { deep: true })
 
-/**
- * 🔀 Intercepte le mouvement et applique la modification d'état sur l'API GLPI
- */
 const handleCardMove = async (event, targetStatusId) => {
-  if (!event.added) return // On cible uniquement la liste qui reçoit le ticket
-
+  if (!event.added) return
   const targetTicket = event.added.element
-  
   try {
-    // Exécute la mise à jour à travers le composable
     await updateTicketStatus(targetTicket.id, targetStatusId)
-    targetTicket.status = targetStatusId // Évite les désynchronisations visuelles
+    targetTicket.status = targetStatusId
   } catch (error) {
-    // Rollback automatique en cas d'erreur réseau / droits GLPI
     refreshBoard()
   }
+}
+
+/**
+ * Charge les dépendances GLPI du ticket ciblé (frais, équipements) via le composable,
+ * puis bascule l'affichage sur la modale de détails.
+ */
+const handleOpenDetails = async (ticket) => {
+  showDetailModal.value = true
+  await selectTicket(ticket)
+}
+
+const handleTicketCreated = () => {
+  showCreateModal.value = false
+  refreshBoard()
 }
 
 const refreshBoard = () => {
@@ -137,7 +149,6 @@ onMounted(() => {
 .refresh-btn { padding: 10px 18px; background: #1e293b; color: #ffffff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
 .refresh-btn:hover { background: #334155; }
 
-/* Parfaitement équilibré pour 3 colonnes à parts égales */
 .kanban-board { display: flex; gap: 24px; align-items: flex-start; overflow-x: auto; padding-bottom: 20px; }
 .kanban-column { flex: 1; min-width: 320px; background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; max-height: 80vh; overflow: hidden; }
 
@@ -145,7 +156,7 @@ onMounted(() => {
 .column-header h3 { margin: 0; font-size: 1.05rem; font-weight: 700; }
 .ticket-count { padding: 2px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; }
 
-.column-cards-zone { flex: 1; overflow-y: auto; padding: 16px; min-height: 250px; display: flex; flex-direction: column; gap: 14px; }
+.column-cards-zone { flex: 1; overflow-y: auto; padding: 16px; min-height: 150px; display: flex; flex-direction: column; gap: 14px; }
 
 .ticket-card { background: #ffffff; padding: 16px; border-radius: 8px; border: 1px solid #f1f5f9; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02); cursor: grab; }
 .ticket-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05); border-color: #e2e8f0; transition: transform 0.15s; }
@@ -158,8 +169,11 @@ onMounted(() => {
 .card-title { margin: 0 0 12px 0; font-size: 0.95rem; color: #334155; font-weight: 600; line-height: 1.5; }
 .card-footer { font-size: 0.8rem; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 10px; }
 
-.ghost-card { opacity: 0.3; background-color: #cbd5e1 !important; border: 2px dashed #94a3b8 !important; box-shadow: none !important; }
+.column-footer { padding: 12px 16px; border-top: 1px solid #e2e8f0; background-color: #ffffff; }
+.btn-add-ticket { width: 100%; padding: 10px; background: none; border: 1px dashed #cbd5e1; border-radius: 6px; color: #64748b; font-weight: 600; cursor: pointer; transition: all 0.2s; text-align: center; }
+.btn-add-ticket:hover { background-color: #f1f5f9; color: #1e293b; border-color: #94a3b8; }
 
+.ghost-card { opacity: 0.3; background-color: #cbd5e1 !important; border: 2px dashed #94a3b8 !important; box-shadow: none !important; }
 .loading-state { text-align: center; padding: 60px 0; color: #64748b; }
 .spinner { width: 45px; height: 45px; border: 4px solid #e2e8f0; border-top-color: #1e293b; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px auto; }
 @keyframes spin { to { transform: rotate(360deg); } }
