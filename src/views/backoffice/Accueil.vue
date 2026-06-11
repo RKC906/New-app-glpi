@@ -7,6 +7,9 @@
         <RouterLink :to="{ name: 'tickets' }">
           <button class="btn-dashboard">Page de tickets</button>
         </RouterLink>
+        <RouterLink :to="{ name: 'kanbansettings' }">
+          <button class="btn-dashboard">Page de setting du kanban</button>
+        </RouterLink>
         <LogOutButton />
     </header>
   <body>

@@ -64,6 +64,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/back/kanbansetting',
+      name: 'kanbansettings',
+      component: () => import('@/views/backoffice/kanban/KanbanSetting.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/back/computers',
       name: 'computers',
       component: () => import('@/views/backoffice/computer/ComputerList.vue'),
