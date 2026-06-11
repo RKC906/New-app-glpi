@@ -51,7 +51,7 @@
         <div class="form-actions">
           <button type="button" @click="$router.back()" class="btn-cancel">Annuler</button>
           <button type="submit" class="btn-submit" :disabled="saving">
-            {{ saving ? 'Enregistrement...' : 'Enregistrer les couleurs' }}
+            {{ saving ? 'Enregistrement...' : 'Enregistrer' }}
           </button>
         </div>
       </form>

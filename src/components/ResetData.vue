@@ -93,9 +93,7 @@ const handleDirectGlpiReset = async () => {
     'Computer',
     'Monitor',
     'Peripheral',
-    'Printer',
-    'Software',
-    'NetworkEquipment'
+    'Phone'
   ]
 
   try {
