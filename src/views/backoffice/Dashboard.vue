@@ -36,28 +36,29 @@
     <div class="details-grid">
       
       <div class="details-card">
-        <div class="card-title">🔌 Répartition du Matériel</div>
+        <div class="card-title">Répartition du Matériel</div>
         <table class="details-table">
           <thead>
             <tr><th>Type d'élément</th><th>Quantité</th></tr>
           </thead>
           <tbody>
-            <tr><td>💻 Ordinateurs (Computers)</td><td class="badge-count gray">{{ stats.computers }}</td></tr>
-            <tr><td>🖥️ Moniteurs (Monitors)</td><td class="badge-count gray">{{ stats.monitors }}</td></tr>
-            <tr><td>🖨️ Imprimantes (Printers)</td><td class="badge-count gray">{{ stats.printers }}</td></tr>
-            <tr><td>🖱️ Périphériques (Peripherals)</td><td class="badge-count gray">{{ stats.peripherals }}</td></tr>
+            <tr><td>Ordinateurs (Computers)</td><td class="badge-count gray">{{ stats.computers }}</td></tr>
+            <tr><td>Moniteurs (Monitors)</td><td class="badge-count gray">{{ stats.monitors }}</td></tr>
+            <tr><td>Imprimantes (Printers)</td><td class="badge-count gray">{{ stats.printers }}</td></tr>
+            <tr><td>Périphériques (Peripherals)</td><td class="badge-count gray">{{ stats.peripherals }}</td></tr>
+            <tr><td>Telephone (Phone)</td><td class="badge-count gray">{{ stats.phones }}</td></tr>
           </tbody>
         </table>
       </div>
 
       <div class="details-card">
-        <div class="card-title">🛠️ Suivi du Helpdesk & Tickets</div>
+        <div class="card-title">Suivi du Helpdesk & Tickets</div>
         
-        <h4 class="sub-title">📌 Par Type</h4>
+        <h4 class="sub-title">Par Type</h4>
         <table class="details-table compact">
           <tbody>
-            <tr><td>🔴 Incidents</td><td class="badge-count red-bg">{{ stats.incidents }}</td></tr>
-            <tr><td>🟢 Demandes</td><td class="badge-count green-bg">{{ stats.demands }}</td></tr>
+            <tr><td>Incidents</td><td class="badge-count red-bg">{{ stats.incidents }}</td></tr>
+            <tr><td>Demandes</td><td class="badge-count green-bg">{{ stats.demands }}</td></tr>
           </tbody>
         </table>
 

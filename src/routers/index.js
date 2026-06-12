@@ -10,10 +10,6 @@ const router = createRouter({
       redirect: '/front/home'
     },
     {
-      path: '/front',
-      redirect: '/front/home'
-    },
-    {
       path: '/back',
       redirect: '/back/login'
     },

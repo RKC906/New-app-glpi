@@ -12,6 +12,7 @@ export function useDashboard() {
     monitors: 0,
     printers: 0,
     peripherals: 0,
+    phones : 0,
     
     // Section Tickets
     totalTickets: 0,
@@ -38,7 +39,8 @@ export function useDashboard() {
       stats.value.monitors = Array.isArray(data.monitors) ? data.monitors.length : 0
       stats.value.printers = Array.isArray(data.printers) ? data.printers.length : 0
       stats.value.peripherals = Array.isArray(data.peripherals) ? data.peripherals.length : 0
-      stats.value.totalAssets = stats.value.computers + stats.value.monitors + stats.value.printers + stats.value.peripherals
+      stats.value.phones = Array.isArray(data.phones) ? data.phones.length : 0
+      stats.value.totalAssets = stats.value.computers + stats.value.monitors + stats.value.printers + stats.value.peripherals + stats.value.phones
 
       // 2. 🎫 Traitement détaillé des Tickets
       const ticketsList = Array.isArray(data.tickets) ? data.tickets : []

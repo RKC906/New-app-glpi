@@ -8,6 +8,7 @@ export const dashboardService = {
       resMonitors, 
       resPrinters, 
       resPeripherals, 
+      resPhones,
       resTickets, 
       resCosts
     ] = await Promise.all([
@@ -15,6 +16,7 @@ export const dashboardService = {
       api.get('/Monitor', { params: { range: '0-999' } }).catch(() => ({ data: [] })),
       api.get('/Printer', { params: { range: '0-999' } }).catch(() => ({ data: [] })),
       api.get('/Peripheral', { params: { range: '0-999' } }).catch(() => ({ data: [] })),
+      api.get('/Phone', { params: { range: '0-999' } }).catch(() => ({ data: [] })),
       api.get('/Ticket', { params: { range: '0-999' } }).catch(() => ({ data: [] })),
       api.get('/TicketCost', { params: { range: '0-999' } }).catch(() => ({ data: [] }))
     ])
@@ -24,6 +26,7 @@ export const dashboardService = {
       monitors: resMonitors.data,
       printers: resPrinters.data,
       peripherals: resPeripherals.data,
+      phones: resPhones.data,
       tickets: resTickets.data,
       costs: resCosts.data
     }

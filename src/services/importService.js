@@ -89,37 +89,65 @@ export const importService = {
   /**
    * 🎫 Importation d'une ligne de Ticket (Fichier CSV 2)
    */
-  async importTicketRow(row) {
+ async importTicketRow(row) {
     console.log(`⏳ Traitement du ticket : "${row.Titre}"...`)
 
     const PREFIX_TO_MODULE = {
-      'PC-': 'Computer',
-      'MN-': 'Monitor',
-      'PH-': 'Phone'
+      'COM-': 'Computer',
+      'MON-': 'Monitor',
+      'PHO-': 'Phone'
     }
 
     const [day, month, year] = row.Date.split('/')
     const formattedDate = `${year}-${month}-${day} ${row.Heure}:00`
 
-// Dans src/services/importService.js -> importTicketRow(row)
+    // 🌟 Dictionnaire de correspondance pour les statuts du CSV (gère le Français et le Malgache)
+    const STATUS_MAPPING = {
+      'nouveau': 1,
+      'vaovao': 1,
+      'New':1,
+      'en cours': 2,
+      'en-cours': 2,
+      'In progress': 2,
+      'Processing': 2,
+      'efa manao': 2,
+      'planifié': 3,
+      'en attente': 4,
+      'résolu': 5,
+      'resolu': 5,
+      'vita': 5,
+      'clos': 6,
+      'closed': 6
+    }
 
-const ticketInput = {
-  input: {
-    name: row.Titre,
-    content: row.Description,
-    date: formattedDate,
-    type: row.Type.toLowerCase() === 'incident' ? 1 : 2,
-    status: 1,
-    priority: row.Priority.toLowerCase() === 'medium' ? 3 : 3,
-    
-    // 🌟 On mappe la Ref du CSV directement dans le champ natif GLPI
-    id_search_option: String(row.Ref_Ticket).trim(),
-    external_identifier: String(row.Ref_Ticket).trim()
-  }
-}
+    // On récupère la valeur du CSV, on nettoie (minuscules, sans espaces au début/fin)
+    // S'il n'y a pas de statut dans le CSV, on met 'nouveau' (1) par défaut
+    const csvStatus = row.Status || row.Statut || 'nouveau'
+    const cleanStatus = csvStatus.toLowerCase().trim()
+
+    // On cherche l'ID GLPI correspondant, sinon on applique 1 (Nouveau) en secours
+    const glpiStatusId = STATUS_MAPPING[cleanStatus] || 1
+
+    const ticketInput = {
+      input: {
+        name: row.Titre,
+        content: row.Description,
+        date: formattedDate,
+        type: row.Type.toLowerCase() === 'incident' ? 1 : 2,
+        
+        // 🚀 Statut dynamique calculé ici !
+        status: glpiStatusId,
+        
+        priority: row.Priority.toLowerCase() === 'medium' ? 3 : 3,
+        
+        // On mappe la Ref du CSV directement dans le champ natif GLPI
+        id_search_option: String(row.Ref_Ticket).trim(),
+        external_identifier: String(row.Ref_Ticket).trim()
+      }
+    }
 
     const { data } = await api.post('/Ticket', ticketInput)
-    console.log(`✅ Ticket créé avec succès (ID GLPI: ${data.id})`)
+    console.log(`✅ Ticket créé avec succès (ID GLPI: ${data.id}) - Statut: ${glpiStatusId}`)
 
     if (!row.Items) return data
 
@@ -151,7 +179,7 @@ const ticketInput = {
     }
 
     return data
-  },
+},
 
 /**
  * 🔀 Importe une ligne de coût de ticket (Fichier CSV 3)

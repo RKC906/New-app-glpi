@@ -29,13 +29,15 @@
       </div>
 
       <div class="filter-group">
-        <label>🖥️ Type d'élément</label>
+        <label>Type d'élément</label>
         <select v-model="searchFilters.itemtype">
           <option value="">-- Tous les types --</option>
-          <option value="Computer">💻 Ordinateurs (Computers)</option>
-          <option value="Monitor">🖥️ Moniteurs (Monitors)</option>
-          <option value="Printer">🖨️ Imprimantes (Printers)</option>
-          <option value="Peripheral">🖱️ Périphériques (Peripherals)</option>
+          <option value="Computer">Ordinateurs (Computers)</option>
+          <option value="Monitor">Moniteurs (Monitors)</option>
+          <option value="Printer">Imprimantes (Printers)</option>
+          <option value="Peripheral">Périphériques (Peripherals)</option>
+          <option value="Phone">Telephones (Phones)</option>
+
         </select>
       </div>
 

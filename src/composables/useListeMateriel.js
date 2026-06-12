@@ -59,7 +59,7 @@ export function useListeMateriel() {
 
   // Utilitaires de formatage de l'interface
   const getItemIcon = (type) => {
-    const icons = { Computer: '💻', Monitor: '🖥️', Printer: '🖨️', Peripheral: '🖱️' }
+    const icons = { Computer: '💻', Monitor: '🖥️', Printer: '🖨️', Peripheral: '🖱️', Phone: '📞'}
     return icons[type] || '📦'
   }
 

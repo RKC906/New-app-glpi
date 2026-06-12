@@ -6,11 +6,12 @@ export const materielService = {
    */
   async getAllAssets() {
     // On lance la récupération de toutes les tables en parallèle
-    const [resComputers, resMonitors, resPrinters, resPeripherals] = await Promise.all([
+    const [resComputers, resMonitors, resPrinters, resPeripherals, resPhones] = await Promise.all([
       api.get('/Computer', { params: { range: '0-999' } }).catch(() => ({ data: [] })),
       api.get('/Monitor', { params: { range: '0-999' } }).catch(() => ({ data: [] })),
       api.get('/Printer', { params: { range: '0-999' } }).catch(() => ({ data: [] })),
-      api.get('/Peripheral', { params: { range: '0-999' } }).catch(() => ({ data: [] }))
+      api.get('/Peripheral', { params: { range: '0-999' } }).catch(() => ({ data: [] })),
+      api.get('/Phone', { params: { range: '0-999' } }).catch(() => ({ data: [] }))
     ])
 
     // On normalise les données pour avoir une structure identique peu importe le module
@@ -18,8 +19,9 @@ export const materielService = {
     const monitors = (resMonitors.data || []).map(item => ({ ...item, itemtype: 'Monitor' }))
     const printers = (resPrinters.data || []).map(item => ({ ...item, itemtype: 'Printer' }))
     const peripherals = (resPeripherals.data || []).map(item => ({ ...item, itemtype: 'Peripheral' }))
+    const phones = (resPhones.data || []).map(item => ({ ...item, itemtype: 'Phone' }))
 
     // On fusionne le tout dans un seul grand tableau d'inventaire
-    return [...computers, ...monitors, ...printers, ...peripherals]
+    return [...computers, ...monitors, ...printers, ...peripherals, ...phones]
   }
 }
