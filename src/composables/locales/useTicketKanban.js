@@ -10,6 +10,7 @@ export function useTicketKanban() {
   const showCreateModal = ref(false);
   const showDetailModal = ref(false);
   const showCostModal = ref(false);
+  const showCancelModal = ref(false);
   const searchQuery = ref('');
 
   // États locaux temporaires lors d'une interception de résolution (Statut 5)
@@ -100,6 +101,15 @@ export function useTicketKanban() {
       return;
     }
 
+        // Interception si déplacement vers la colonne Résolu (ID 5)
+    else if (targetStatusId === 2) {
+      pendingTicket.value = targetTicket;
+      pendingMoveEvent.value = event;
+      costInputAmount.value = null;
+      showCancelModal.value = true;
+      return;
+    }
+
     // Comportement standard pour les autres statuts
     try {
       await updateTicketStatus(targetTicket.id, targetStatusId);
@@ -153,6 +163,13 @@ export function useTicketKanban() {
     refreshBoard();
   };
 
+    const cancelAnnulation = () => {
+    showCancelModal.value = false;
+    pendingTicket.value = null;
+    pendingMoveEvent.value = null;
+    refreshBoard();
+  };
+
   const handleOpenDetails = async (ticket) => {
     showDetailModal.value = true;
     await selectTicket(ticket);
@@ -163,6 +180,27 @@ export function useTicketKanban() {
     refreshBoard();
   };
 
+    const confirmAnnulation = async () => {
+    if (!pendingTicket.value) return;
+
+    try {
+      const ticketId = pendingTicket.value.id;
+      await kanbanCostService.cancelCost({
+        ticket_id: ticketId
+      });
+      await updateTicketStatus(ticketId, 2);
+      pendingTicket.value.status = 2;
+      showCancelModal.value = false;
+      pendingTicket.value = null;
+      pendingMoveEvent.value = null;
+
+      alert("Cout du ticket annulee !");
+    } catch (error) {
+      alert("Une erreur est survenue lors de l'annulation.");
+      refreshBoard(); // Annule le déplacement graphique en cas d'erreur backend
+    }
+  };
+
   onMounted(refreshBoard);
 
   return {
@@ -170,6 +208,7 @@ export function useTicketKanban() {
     showCreateModal,
     showDetailModal,
     showCostModal,
+    showCancelModal,
     searchQuery,
     costInputAmount,
     costInputName,
@@ -180,7 +219,9 @@ export function useTicketKanban() {
     handleCardMove,
     confirmResolutionWithCost,
     cancelResolution,
+    cancelAnnulation,
     handleOpenDetails,
-    handleTicketCreated
+    handleTicketCreated,
+    confirmAnnulation
   };
 }

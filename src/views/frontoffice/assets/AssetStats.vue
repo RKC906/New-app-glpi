@@ -27,11 +27,11 @@
           <thead class="table-light border-bottom">
             <tr>
               <th class="ps-4 py-3 text-secondary small text-uppercase">Catégorie de Matériel</th>
-              <th class="py-3 text-secondary small text-uppercase text-center">Matériels Touchés</th>
-              <th class="py-3 text-secondary small text-uppercase text-center">Volume Tickets</th>
-              <th class="py-3 text-secondary small text-uppercase text-end">Total GLPI</th>
-              <th class="py-3 text-secondary small text-uppercase text-end text-success">Total Kanban (SQLite)</th>
-              <th class="pe-4 py-3 text-dark fw-bold small text-uppercase text-end">Dépense Cumulée</th>
+              <!-- <th class="py-3 text-secondary small text-uppercase text-center">Matériels Touchés</th>
+              <th class="py-3 text-secondary small text-uppercase text-center">Volume Tickets</th> -->
+              <th class="py-3 text-secondary small text-uppercase text-end">Cost GLPI</th>
+              <th class="py-3 text-secondary small text-uppercase text-end text-success">Super Cost</th>
+              <th class="pe-4 py-3 text-dark fw-bold small text-uppercase text-end">Total Cost</th>
             </tr>
           </thead>
           <tbody>
@@ -45,7 +45,7 @@
                 <div class="fw-bold text-dark fs-6">{{ cat.displayName }}</div>
               </td>
               
-              <td class="py-3 text-center">
+              <!-- <td class="py-3 text-center">
                 <span class="badge bg-light text-dark border px-2.5 py-1">
                   {{ cat.uniqueItemsCount }} {{ cat.uniqueItemsCount > 1 ? 'appareils' : 'appareil' }}
                 </span>
@@ -55,7 +55,7 @@
                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5">
                   {{ cat.ticketsCount }} {{ cat.ticketsCount > 1 ? 'tickets' : 'ticket' }}
                 </span>
-              </td>
+              </td> -->
 
               <td class="py-3 text-end text-muted font-monospace">{{ cat.glpiCost.toFixed(2) }} €</td>
               <td class="py-3 text-end text-success fw-semibold font-monospace">{{ cat.sqliteCost.toFixed(2) }} €</td>

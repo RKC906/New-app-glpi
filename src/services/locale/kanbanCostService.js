@@ -29,5 +29,21 @@ export const kanbanCostService = {
       console.error("❌ Erreur [kanbanCostService.getAllCosts]:", error);
       throw error;
     }
+  },
+
+
+  async cancelCost({ ticketId}) {
+  try {
+    const response = await fetch(`${EXPRESS_BASE_URL}/kanban/costs/delete/${ticketId}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) throw new Error('Erreur lors de la suppression du coût local');
+    return await response.json();
+  } catch (error) {
+    console.error("❌ Erreur [deleteTicketCost]:", error);
+    throw error;
+  }
   }
 };

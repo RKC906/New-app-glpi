@@ -110,6 +110,30 @@
         </div>
       </div>
     </div>
+
+
+    <div v-if="showCancelModal" class="modal-overlay" @click.self="cancelAnnulation">
+      <div class="cost-modal-content">
+        <div class="cost-modal-header">
+          <h3>Annulation Tickets #{{ pendingTicket?.id }}</h3>
+        </div>
+        
+        <div class="cost-modal-body">
+          <p>Annuler un tickets</p>
+        </div>
+          <div class="cost-form-group">
+            <label>Pourcentage Reouverture</label>
+            <input v-model.number="costInputAmount" type="number" step="0.01" placeholder="0.00" min="0" required autofocus />
+          </div>
+        <div class="cost-modal-footer">
+          <button @click="confirmAnnulation" class="btn-cost-confirm">Confirmer Annulation</button>
+          <button @click="confirmReouverture" class="btn-cost-confirm">Confirmer Reouverture</button>
+
+        </div>
+      </div>
+    </div>
+
+
   </div>
 </template>
 
@@ -125,6 +149,7 @@ const {
   showCreateModal,
   showDetailModal,
   showCostModal,
+  showCancelModal,
   searchQuery,
   costInputAmount,
   costInputName,
@@ -135,8 +160,10 @@ const {
   handleCardMove,
   confirmResolutionWithCost,
   cancelResolution,
+  cancelAnnulation,
   handleOpenDetails,
-  handleTicketCreated
+  handleTicketCreated,
+  confirmAnnulation
 } = useTicketKanban()
 </script>
 
