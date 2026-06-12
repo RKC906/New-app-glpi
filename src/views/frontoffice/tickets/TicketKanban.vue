@@ -21,7 +21,6 @@
     </div>
 
     <div v-if="!isLoading" class="kanban-board">
-      
       <div 
         v-for="column in columnsConfig" 
         :key="column.id" 
@@ -66,7 +65,6 @@
           </button>
         </div>
       </div>
-
     </div>
 
     <div v-else class="loading-state">
@@ -84,117 +82,65 @@
       v-if="showDetailModal"
       @close="showDetailModal = false"
     />
+
+    <div v-if="showCostModal" class="modal-overlay" @click.self="cancelResolution">
+      <div class="cost-modal-content">
+        <div class="cost-modal-header">
+          <h3>🛠️ Résolution du ticket #{{ pendingTicket?.id }}</h3>
+          <button @click="cancelResolution" class="btn-close">&times;</button>
+        </div>
+        
+        <div class="cost-modal-body">
+          <p>Vous êtes sur le point de marquer ce ticket comme <strong>Résolu</strong>. Veuillez renseigner le coût lié à cette intervention pour les statistiques locales :</p>
+          
+          <div class="cost-form-group">
+            <label>Libellé du coût</label>
+            <input v-model="costInputName" type="text" placeholder="Ex: Remplacement matériel, Main d'œuvre..." />
+          </div>
+
+          <div class="cost-form-group">
+            <label>Montant du coût</label>
+            <input v-model.number="costInputAmount" type="number" step="0.01" placeholder="0.00" min="0" required autofocus />
+          </div>
+        </div>
+
+        <div class="cost-modal-footer">
+          <button @click="cancelResolution" class="btn-cost-cancel">Annuler</button>
+          <button @click="confirmResolutionWithCost" class="btn-cost-confirm">Confirmer & Résoudre</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, reactive, watch } from 'vue'
 import draggable from 'vuedraggable'
-import { useTicketsManager } from '@/composables/useTicketsManager'
 import TicketCreateModal from '@/components/front/tickets/TicketCreateModal.vue'
 import TicketDetailModal from '@/components/front/tickets/TicketDetailModal.vue'
-// Utilisation du service SQLite
-import { kanbanConfigService } from '@/services/locale/kanbanConfigService'
+import { useTicketKanban } from '@/composables/locales/useTicketKanban'
 
-const { tickets, isLoading, loadTickets, updateTicketStatus, selectTicket } = useTicketsManager()
-
-const showCreateModal = ref(false)
-const showDetailModal = ref(false)
-const searchQuery = ref('')
-
-// Configuration initiale par défaut
-const columnsConfig = ref([
-  { id: 1, title: 'Nouveau', color: '#0ea5e9', bg: '#f0f9ff', textColor: '#0369a1', badgeBg: 'rgba(14, 165, 233, 0.15)' },
-  { id: 2, title: 'En Cours', color: '#f59e0b', bg: '#fffaf0', textColor: '#b45309', badgeBg: 'rgba(245, 158, 11, 0.15)' },
-  { id: 5, title: 'Résolu', color: '#10b981', bg: '#f0fdf4', textColor: '#15803d', badgeBg: 'rgba(16, 185, 129, 0.15)' }
-])
-
-const boardLists = reactive({ 1: [], 2: [], 5: [] })
-
-/**
- * Lit la configuration SQLite (Couleurs + Langue choisie par l'admin)
- */
-const loadCustomKanbanConfig = async () => {
-  try {
-    const config = await kanbanConfigService.fetchConfig()
-    // Forcer en minuscule et nettoyer la langue active
-    const activeLang = (config.currentLang || 'fr').toLowerCase().trim() 
-
-    columnsConfig.value = columnsConfig.value.map(column => {
-      const customColor = config.colors.find(c => c.id_status === column.id)
-      
-      // Sécuriser la comparaison de la langue
-      const customTrans = config.translations.find(t => {
-        const tLang = (t.langue || '').toLowerCase().trim()
-        return t.id_status === column.id && tLang === activeLang
-      })
-
-      return {
-        ...column,
-        bg: customColor ? customColor.color : column.bg,
-        // Si customTrans existe, on prend sa traduction, sinon on garde la valeur par défaut
-        title: customTrans ? customTrans.translation : column.title
-      }
-    })
-  } catch (error) {
-    console.error('Erreur de chargement des paramètres SQLite:', error)
-  }
-}
-
-const dispatchTicketsToBoard = () => {
-  const filtered = tickets.value.filter(t => {
-    const query = searchQuery.value.toLowerCase().trim()
-    if (!query) return true
-    
-    const matchesTitle = t.name ? t.name.toLowerCase().includes(query) : false
-    const matchesId = t.id ? t.id.toString().includes(query.replace('#', '')) : false
-    
-    return matchesTitle || matchesId
-  })
-
-  boardLists[1] = filtered.filter(t => parseInt(t.status) === 1)
-  boardLists[2] = filtered.filter(t => parseInt(t.status) === 2 || parseInt(t.status) === 3)
-  boardLists[5] = filtered.filter(t => parseInt(t.status) === 5 || parseInt(t.status) === 6)
-}
-
-watch([tickets, searchQuery], () => { 
-  dispatchTicketsToBoard() 
-}, { deep: true })
-
-const handleCardMove = async (event, targetStatusId) => {
-  if (!event.added) return
-  const targetTicket = event.added.element
-  try {
-    await updateTicketStatus(targetTicket.id, targetStatusId)
-    targetTicket.status = targetStatusId
-  } catch (error) {
-    refreshBoard()
-  }
-}
-
-const handleOpenDetails = async (ticket) => {
-  showDetailModal.value = true
-  await selectTicket(ticket)
-}
-
-const handleTicketCreated = () => {
-  showCreateModal.value = false
-  refreshBoard()
-}
-
-const refreshBoard = () => {
-  loadTickets()
-  loadCustomKanbanConfig() // Se remet à jour avec la langue et les couleurs de l'admin
-}
-
-onMounted(() => {
-  loadTickets()
-  loadCustomKanbanConfig()
-})
+// Extraction de toute la logique métier depuis le composable
+const {
+  isLoading,
+  showCreateModal,
+  showDetailModal,
+  showCostModal,
+  searchQuery,
+  costInputAmount,
+  costInputName,
+  pendingTicket,
+  columnsConfig,
+  boardLists,
+  refreshBoard,
+  handleCardMove,
+  confirmResolutionWithCost,
+  cancelResolution,
+  handleOpenDetails,
+  handleTicketCreated
+} = useTicketKanban()
 </script>
 
 <style scoped>
-/* Conserve ton CSS d'origine */
 .kanban-page { padding: 30px; background-color: #f1f5f9; min-height: 100vh; font-family: sans-serif; }
 .kanban-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .kanban-header h2 { font-size: 1.8rem; color: #1e293b; margin: 0; font-weight: 700; }
@@ -225,4 +171,33 @@ onMounted(() => {
 .loading-state { text-align: center; padding: 60px 0; color: #64748b; }
 .spinner { width: 45px; height: 45px; border: 4px solid #e2e8f0; border-top-color: #1e293b; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px auto; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Modale de gestion des coûts locaux */
+.modal-overlay { 
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+  background-color: rgba(15, 23, 42, 0.45); backdrop-filter: blur(4px); 
+  display: flex; justify-content: center; align-items: center; z-index: 1000; 
+}
+.cost-modal-content {
+  background: white; width: 100%; max-width: 450px; border-radius: 10px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15); display: flex; flex-direction: column;
+  overflow: hidden; animation: popUp 0.2s ease-out;
+}
+@keyframes popUp { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.cost-modal-header {
+  padding: 16px 20px; background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.cost-modal-header h3 { margin: 0; font-size: 1.1rem; color: #0f172a; }
+.btn-close { background: none; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer; }
+.cost-modal-body { padding: 20px; color: #475569; font-size: 0.95rem; line-height: 1.5; }
+.cost-form-group { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+.cost-form-group label { font-size: 0.8rem; font-weight: 700; color: #64748b; text-transform: uppercase; }
+.cost-form-group input { padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 1rem; outline: none; color: #1e293b; }
+.cost-form-group input:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); }
+.cost-modal-footer { padding: 14px 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px; background-color: #f8fafc; }
+.btn-cost-cancel { padding: 9px 16px; background: #e2e8f0; border: none; border-radius: 6px; font-weight: 600; color: #475569; cursor: pointer; }
+.btn-cost-cancel:hover { background: #cbd5e1; }
+.btn-cost-confirm { padding: 9px 16px; background: #10b981; border: none; border-radius: 6px; font-weight: 600; color: white; cursor: pointer; }
+.btn-cost-confirm:hover { background: #059669; }
 </style>

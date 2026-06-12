@@ -95,7 +95,9 @@ export const importService = {
     const PREFIX_TO_MODULE = {
       'COM-': 'Computer',
       'MON-': 'Monitor',
-      'PHO-': 'Phone'
+      'PHO-': 'Phone',
+      'PC-': 'Computer',
+            'MN-': 'Monitor'
     }
 
     const [day, month, year] = row.Date.split('/')

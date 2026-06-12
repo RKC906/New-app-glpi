@@ -9,6 +9,11 @@
           <button class="btn-secondary">Voir le kanban</button>
       </RouterLink>
     </div>
+    <div>
+      <RouterLink :to="{ name: 'assetstats' }">
+          <button class="btn-secondary">Voir le couts par Assets</button>
+      </RouterLink>
+    </div>
     
   <div class="inventory-container">
     <div class="inventory-header">

@@ -30,6 +30,11 @@ const router = createRouter({
       name: 'ticketkanban',
       component: () => import('@/views/frontoffice/tickets/TicketKanban.vue')
     },
+    {
+      path: '/front/assetcouts',
+      name: 'assetstats',
+      component: () => import('@/views/frontoffice/assets/AssetStats.vue')
+    },
 
 
 
