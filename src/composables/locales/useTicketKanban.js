@@ -1,48 +1,98 @@
-import { ref, onMounted } from 'vue';
+import { ref, reactive, watch, onMounted } from 'vue';
 import { useTicketsManager } from '@/composables/useTicketsManager';
+import { kanbanConfigService } from '@/services/locale/kanbanConfigService';
 import { kanbanCostService } from '@/services/locale/kanbanCostService';
 
 export function useTicketKanban() {
   const { tickets, isLoading, loadTickets, updateTicketStatus, selectTicket } = useTicketsManager();
 
+  // États des Fenêtres Modales
   const showCreateModal = ref(false);
   const showDetailModal = ref(false);
   const showCostModal = ref(false);
   const showCancelModal = ref(false);
   const searchQuery = ref('');
 
+  // États locaux temporaires lors d'une interception de résolution (Statut 5) / Réouverture (Statut 2)
   const costInputAmount = ref(null);
   const costInputName = ref('Frais de résolution / Maintenance');
   const pendingMoveEvent = ref(null);
   const pendingTicket = ref(null);
 
-  // 🛠️ Nouveau champ pour le pourcentage de réouverture
-  const reopenPercentage = ref(0);
-
+  // Structure des colonnes par défaut du tableau
   const columnsConfig = ref([
     { id: 1, title: 'Nouveau', color: '#0ea5e9', bg: '#f0f9ff', textColor: '#0369a1', badgeBg: 'rgba(14, 165, 233, 0.15)' },
                             { id: 2, title: 'En Cours', color: '#f59e0b', bg: '#fffaf0', textColor: '#b45309', badgeBg: 'rgba(245, 158, 11, 0.15)' },
                             { id: 5, title: 'Résolu', color: '#10b981', bg: '#f0fdf4', textColor: '#15803d', badgeBg: 'rgba(16, 185, 129, 0.15)' }
   ]);
 
-  const boardLists = ref({ 1: [], 2: [], 5: [] });
+  // Listes réactives contenant les cartes réparties par colonne
+  const boardLists = reactive({ 1: [], 2: [], 5: [] });
 
+  /**
+   * Recharge l'ensemble du tableau : Tickets GLPI + Configuration SQLite (Langue et Couleurs)
+   */
   const refreshBoard = async () => {
-    await loadTickets();
-    boardLists.value = { 1: [], 2: [], 5: [] };
-    tickets.value.forEach(ticket => {
-      const statusId = ticket.status;
-      if (boardLists.value[statusId]) {
-        boardLists.value[statusId].push(ticket);
-      }
-    });
+    loadTickets();
+    await loadCustomKanbanConfig();
   };
 
+  /**
+   * Lit et applique la configuration de style et de langue stockée dans SQLite
+   */
+  const loadCustomKanbanConfig = async () => {
+    try {
+      const config = await kanbanConfigService.fetchConfig();
+      const activeLang = (config.currentLang || 'fr').toLowerCase().trim();
+
+      columnsConfig.value = columnsConfig.value.map(column => {
+        const customColor = config.colors.find(c => c.id_status === column.id);
+        const customTrans = config.translations.find(t => {
+          const tLang = (t.langue || '').toLowerCase().trim();
+          return t.id_status === column.id && tLang === activeLang;
+        });
+
+        return {
+          ...column,
+          bg: customColor ? customColor.color : column.bg,
+          title: customTrans ? customTrans.translation : column.title
+        };
+      });
+    } catch (error) {
+      console.error('Erreur lors du chargement des paramètres SQLite:', error);
+    }
+  };
+
+  /**
+   * Filtre et répartit les tickets dans leurs colonnes Kanban respectives
+   */
+  const dispatchTicketsToBoard = () => {
+    const filtered = tickets.value.filter(t => {
+      const query = searchQuery.value.toLowerCase().trim();
+      if (!query) return true;
+
+      const matchesTitle = t.name ? t.name.toLowerCase().includes(query) : false;
+      const matchesId = t.id ? t.id.toString().includes(query.replace('#', '')) : false;
+
+      return matchesTitle || matchesId;
+    });
+
+    boardLists[1] = filtered.filter(t => parseInt(t.status) === 1);
+    boardLists[2] = filtered.filter(t => parseInt(t.status) === 2 || parseInt(t.status) === 3);
+    boardLists[5] = filtered.filter(t => parseInt(t.status) === 5 || parseInt(t.status) === 6);
+  };
+
+  // Synchronise la répartition dès que la liste GLPI ou la recherche changent
+  watch([tickets, searchQuery], dispatchTicketsToBoard, { deep: true });
+
+  /**
+   * Intercepte ou exécute le déplacement d'une carte d'un statut à un autre
+   */
   const handleCardMove = async (event, targetStatusId) => {
     if (!event.added) return;
     const targetTicket = event.added.element;
 
-    // Interception 1 : Vers Résolu (ID 5) -> Formulaire coût standard
+    // Interception si déplacement vers la colonne Résolu (ID 5)
     if (targetStatusId === 5) {
       pendingTicket.value = targetTicket;
       pendingMoveEvent.value = event;
@@ -51,16 +101,16 @@ export function useTicketKanban() {
       return;
     }
 
-    // 🛠️ Interception 2 : Depuis Résolu (5) Vers En Cours (ID 2) -> Boite dialogue demandée
-    if (targetStatusId === 2 && targetTicket.status === 5) {
+    // Interception si déplacement vers la colonne En Cours (ID 2) depuis Résolu
+    else if (targetStatusId === 2) {
       pendingTicket.value = targetTicket;
       pendingMoveEvent.value = event;
-      reopenPercentage.value = 0; // Reset input field
+      costInputAmount.value = null; // Prêt à recevoir le pourcentage de réouverture
       showCancelModal.value = true;
       return;
     }
 
-    // Traitement standard pour les autres colonnes
+    // Comportement standard pour les autres statuts
     try {
       await updateTicketStatus(targetTicket.id, targetStatusId);
       targetTicket.status = targetStatusId;
@@ -69,51 +119,89 @@ export function useTicketKanban() {
     }
   };
 
-  // 🛠️ BOUTON "ANNULATION" (Supprime le dernier coût et repasse en statut 2)
-  const confirmAnnulation = async () => {
+  /**
+   * Confirme le passage à Résolu, sauve dans SQLite puis met à jour GLPI
+   */
+  const confirmResolutionWithCost = async () => {
     if (!pendingTicket.value) return;
+
     try {
       const ticketId = pendingTicket.value.id;
-      await kanbanCostService.cancelCost(ticketId);
-      await updateTicketStatus(ticketId, 2);
+      const amount = parseFloat(costInputAmount.value) || 0;
 
-      showCancelModal.value = false;
+      // 1. Sauvegarde SQLite via le service dédié
+      await kanbanCostService.saveTicketCost({
+        ticket_id: ticketId,
+        amount: amount,
+        label: costInputName.value,
+        date: new Date().toISOString().slice(0, 10)
+      });
+
+      // 2. Clôture sur l'API GLPI
+      await updateTicketStatus(ticketId, 5);
+      pendingTicket.value.status = 5;
+
+      // Reset des états
+      showCostModal.value = false;
       pendingTicket.value = null;
       pendingMoveEvent.value = null;
-      alert("Dernier coût supprimé et ticket remis En cours.");
-      await refreshBoard();
+
+      alert("Ticket résolu et coût enregistré localement avec succès !");
     } catch (error) {
-      alert("Erreur lors de la suppression du coût.");
-      cancelAnnulationModal();
+      alert("Une erreur est survenue lors de l'enregistrement.");
+      refreshBoard();
     }
   };
 
-  // 🛠️ BOUTON "RÉOUVERTURE" (Ajoute X% du dernier coût et repasse en statut 2)
+  /**
+   * 🌟 NOUVELLE MÉTHODE : Gère la réouverture en appliquant le pourcentage au coût actuel
+   */
   const confirmReouverture = async () => {
     if (!pendingTicket.value) return;
+
     try {
       const ticketId = pendingTicket.value.id;
-      await kanbanCostService.reopenTicketCost(ticketId, reopenPercentage.value);
-      await updateTicketStatus(ticketId, 2);
 
+      // 1. Récupérer l'historique complet pour extraire le coût existant du ticket
+      const allCosts = await kanbanCostService.getAllCosts();
+      const currentTicketCost = allCosts.find(c => Number(c.ticket_id) === Number(ticketId));
+
+      const baseAmount = currentTicketCost ? parseFloat(currentTicketCost.amount) : 0;
+
+      // 2. Récupérer la valeur du pourcentage (ex: 10 pour +10%, -5 pour -5%)
+      const pourcentage = parseFloat(costInputAmount.value) || 0;
+
+      // 3. Calculer le montant réajusté
+      const nouveauMontant = baseAmount * (1 + (pourcentage / 100));
+
+      // 4. Enregistrer la nouvelle ligne de coût réajustée dans SQLite
+      await kanbanCostService.saveTicketCost({
+        ticket_id: ticketId,
+        amount: nouveauMontant,
+        label: `Ajustement réouverture (${pourcentage >= 0 ? '+' : ''}${pourcentage}%)`,
+                                             date: new Date().toISOString().slice(0, 10)
+      });
+
+      // 5. Repasser le ticket au statut "En cours" (2) sur GLPI
+      await updateTicketStatus(ticketId, 2);
+      pendingTicket.value.status = 2;
+
+      // Nettoyage et fermeture de la modale
       showCancelModal.value = false;
       pendingTicket.value = null;
       pendingMoveEvent.value = null;
-      alert(`Ticket réouvert avec succès avec des frais de ${reopenPercentage.value}%.`);
-      await refreshBoard();
+
+      alert(`Ticket réouvert ! Ancien coût : ${baseAmount.toFixed(2)} € -> Nouveau coût : ${nouveauMontant.toFixed(2)} €`);
     } catch (error) {
-      alert("Erreur lors de la réouverture.");
-      cancelAnnulationModal();
+      console.error(error);
+      alert("Erreur lors du calcul ou de l'enregistrement du coût de réouverture.");
+      refreshBoard();
     }
   };
 
-  const cancelAnnulationModal = () => {
-    showCancelModal.value = false;
-    pendingTicket.value = null;
-    pendingMoveEvent.value = null;
-    refreshBoard(); // Remet la carte graphiquement dans Terminé
-  };
-
+  /**
+   * Annule la clôture du ticket et repositionne la carte
+   */
   const cancelResolution = () => {
     showCostModal.value = false;
     pendingTicket.value = null;
@@ -121,24 +209,44 @@ export function useTicketKanban() {
     refreshBoard();
   };
 
-  const confirmResolutionWithCost = async () => {
+  const cancelAnnulation = () => {
+    showCancelModal.value = false;
+    pendingTicket.value = null;
+    pendingMoveEvent.value = null;
+    refreshBoard();
+  };
+
+  const handleOpenDetails = async (ticket) => {
+    showDetailModal.value = true;
+    await selectTicket(ticket);
+  };
+
+  const handleTicketCreated = () => {
+    showCreateModal.value = false;
+    refreshBoard();
+  };
+
+  /**
+   * Supprime complètement le coût du ticket (votre ancienne méthode restée intacte au besoin)
+   */
+  const confirmAnnulation = async () => {
     if (!pendingTicket.value) return;
+
     try {
       const ticketId = pendingTicket.value.id;
-      if (costInputAmount.value !== null && costInputAmount.value > 0) {
-        await kanbanCostService.saveTicketCost({
-          ticket_id: ticketId,
-          amount: parseFloat(costInputAmount.value),
-                                               label: costInputName.value
-        });
-      }
-      await updateTicketStatus(ticketId, 5);
-      showCostModal.value = false;
+      await kanbanCostService.cancelCost({
+        ticket_id: ticketId
+      });
+      await updateTicketStatus(ticketId, 2);
+      pendingTicket.value.status = 2;
+      showCancelModal.value = false;
       pendingTicket.value = null;
       pendingMoveEvent.value = null;
-      await refreshBoard();
+
+      alert("Coût du ticket annulé !");
     } catch (error) {
-      alert("Erreur lors de la sauvegarde du coût.");
+      alert("Une erreur est survenue lors de l'annulation.");
+      refreshBoard();
     }
   };
 
@@ -153,16 +261,17 @@ export function useTicketKanban() {
     searchQuery,
     costInputAmount,
     costInputName,
-    reopenPercentage, // 🛠️ Retourné
     pendingTicket,
     columnsConfig,
     boardLists,
     refreshBoard,
     handleCardMove,
-    cancelResolution,
     confirmResolutionWithCost,
-    confirmAnnulation,  // 🛠️ Retourné
-    confirmReouverture, // 🛠️ Retourné
-    cancelAnnulationModal
+    confirmReouverture, // 🌟 Exporté pour le template .vue
+    cancelResolution,
+    cancelAnnulation,
+    handleOpenDetails,
+    handleTicketCreated,
+    confirmAnnulation
   };
 }
