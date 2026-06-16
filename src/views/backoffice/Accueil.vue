@@ -10,6 +10,9 @@
         <RouterLink :to="{ name: 'kanbansettings' }">
           <button class="btn-dashboard">Page de setting du kanban</button>
         </RouterLink>
+        <RouterLink :to="{ name: 'importmvt' }">
+          <button class="btn-dashboard">Page Import Mvt</button>
+        </RouterLink>
         <LogOutButton />
     </header>
   <body>

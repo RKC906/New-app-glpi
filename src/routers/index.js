@@ -71,6 +71,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+        path: '/back/importmvt',
+      name: 'importmvt',
+      component: () => import('@/views/backoffice/ImportMvt.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/back/computers',
       name: 'computers',
       component: () => import('@/views/backoffice/computer/ComputerList.vue'),

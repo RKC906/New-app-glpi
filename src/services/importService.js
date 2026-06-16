@@ -1,4 +1,29 @@
 import api from './api'
+import { kanbanCostService } from './locale/kanbanCostService'
+export function parseFloatSafe(value) {
+    if (value === null || value === undefined) {
+        return null;
+    }
+
+    // Déjà un nombre
+    if (typeof value === "number") {
+        return Number.isFinite(value) ? value : null;
+    }
+
+    // Conversion en chaîne et nettoyage
+    let str = String(value).trim().replace(/\s/g, "");
+
+    if (str === "") {
+        return null;
+    }
+
+    // Remplace la virgule décimale par un point
+    str = str.replace(",", ".");
+
+    const result = Number(str);
+
+    return Number.isFinite(result) ? result : null;
+}
 
 export const importService = {
   /**
@@ -297,5 +322,80 @@ async importTicketCostRow(csvRow) {
     })
 
     console.log(`✅ Image ${fullFileName} associée avec succès au matériel [${type}] (ID: ${item.id})`)
+  },
+
+async ImportmvtTickets(csvRow) {
+  const csvRef = String(csvRow.ticket || csvRow.tickets || '').trim();
+  if (!csvRef) return;
+
+  console.log(`🔍 Traitement de la ligne du mouvement - Réf CSV: ${csvRef}`);
+
+  // 1. On récupère la liste des tickets présents dans GLPI
+  // On supprime "searchText" pour ne pas rater les tickets qui n'ont pas leur numéro de réf dans leur titre
+  const searchRes = await api.get('/Ticket', {
+    params: {
+      range: '0-999' // On prend une large plage pour être sûr d'avoir tous nos tickets importés
+    }
+  });
+
+  const tickets = Array.isArray(searchRes.data) ? searchRes.data : [];
+
+  if (tickets.length === 0) {
+    throw new Error(`Aucun ticket trouvé dans GLPI. Impossible d'associer la référence CSV #${csvRef}`);
   }
+
+  // 2. Tri chronologique absolu par ID GLPI croissant (ex: [240, 241, 242, 243, ...])
+  tickets.sort((a, b) => parseInt(a.id) - parseInt(b.id));
+
+  // 3. Calcul de la position dynamique (Index = Réf - 1)
+  const targetIndex = parseInt(csvRef, 10) - 1;
+  let fallbackTicket = null;
+
+  // Si c'est un index valide par rapport au nombre de tickets en base
+  if (!isNaN(targetIndex) && targetIndex >= 0 && targetIndex < tickets.length) {
+    fallbackTicket = tickets[targetIndex];
+  } else {
+    // SÉCURITÉ : Si la référence du CSV est déjà un ID réel GLPI (ex: "240")
+    fallbackTicket = tickets.find(t => String(t.id) === csvRef);
+  }
+
+  if (!fallbackTicket) {
+    throw new Error(
+      `Liaison impossible : La référence CSV #${csvRef} correspond à la position ${targetIndex + 1}, ` +
+      `mais GLPI n'a que ${tickets.length} ticket(s) au total en base.`
+    );
+  }
+
+  const realGlpiId = parseInt(fallbackTicket.id);
+  console.log(`🎯 [Méthode Séquentielle] Réf CSV: ${csvRef} ➔ Position: ${targetIndex + 1} ➔ ID GLPI Réel: ${realGlpiId}`);
+
+// 4. Nettoyage de la valeur et aiguillage vers tes services de coûts
+  const rawmvt = String(csvRow.mvt || '').trim().toLowerCase();
+  const cleanvaleur = csvRow.valeur ? parseFloat(String(csvRow.valeur).replace(',', '.').trim()) : 0;
+
+  // 🌟 OBJET UNIVERSEL : On fournit toutes les déclinaisons possibles pour le frontend
+  const bulletproofPayload = {
+    ticket_id: realGlpiId,
+    ticketId: realGlpiId,
+    id: realGlpiId,
+    percentage: cleanvaleur,
+    amount: cleanvaleur,
+    valeur: cleanvaleur
+  };
+
+  if (rawmvt === 'open') {
+    console.log(`🔄 Envoi réouverture pour le ticket GLPI #${realGlpiId}`, bulletproofPayload);
+    return await kanbanCostService.reopenTicketCost(bulletproofPayload);
+  }    
+  else if (rawmvt === 'cancel') {
+    console.log(`🗑️ Envoi annulation du dernier coût pour le ticket GLPI #${realGlpiId}`, bulletproofPayload);
+    return await kanbanCostService.cancelCost(bulletproofPayload);
+  }
+  else if (rawmvt === 'close') {
+    console.log(`💾 Envoi enregistrement coût de fermeture pour le ticket GLPI #${realGlpiId}`, bulletproofPayload);
+    return await kanbanCostService.saveTicketCost(bulletproofPayload);
+  } else {
+    console.warn(`⚠️ Mouvement inconnu ignoré : "${rawmvt}"`);
+  }
+}
 }

@@ -5,10 +5,15 @@
         <h2>Tableau de Bord Kanban</h2>
         <p class="subtitle">Gestion visuelle des tickets de support GLPI</p>
       </div>
-      <button @click="refreshBoard" class="refresh-btn" :disabled="isLoading">
-        <span v-if="isLoading">Chargement...</span>
-        <span v-else>Actualiser</span>
-      </button>
+      <div class="header-actions">
+        <button @click="showCreateModal = true" class="create-btn">
+          ➕ Créer un Ticket
+        </button>
+        <button @click="refreshBoard" class="refresh-btn" :disabled="isLoading">
+          <span v-if="isLoading">Chargement...</span>
+          <span v-else>Actualiser</span>
+        </button>
+      </div>
     </div>
 
     <div class="search-container">
@@ -38,101 +43,105 @@
           group="tickets"
           item-key="id"
           class="column-cards-zone"
-          ghost-class="ghost-card"
-          @change="(evt) => handleCardMove(evt, column.id)"
+          @change="handleCardMove($event, column.id)"
         >
           <template #item="{ element }">
-            <div class="ticket-card" :key="element.id" @click="handleOpenDetails(element)">
-              <div class="card-header-tags">
+            <div class="ticket-card" @click="handleOpenDetails(element)">
+              <div class="ticket-card-header">
                 <span class="ticket-id">#{{ element.id }}</span>
-                <span class="priority-tag" :class="'prio-' + element.priority">
-                  P{{ element.priority }}
+                <span class="ticket-priority" :class="'priority-' + element.priority">
+                  P{{ element.priority || 3 }}
                 </span>
               </div>
-              <h4 class="card-title">{{ element.name || 'Sans titre' }}</h4>
-              <div class="card-footer">
-                <span class="card-date">
-                  {{ element.date ? new Date(element.date).toLocaleDateString('fr-FR', {day: 'numeric', month: 'short'}) : 'N/A' }}
-                </span>
+              <div class="ticket-title">{{ element.name }}</div>
+              <div class="ticket-card-footer">
+                <span class="ticket-date">📅 {{ element.date_mod || element.date }}</span>
               </div>
             </div>
           </template>
         </draggable>
-
-        <div v-if="column.id === 1" class="column-footer">
-          <button @click="showCreateModal = true" class="btn-add-ticket">
-            + Ajouter un ticket
-          </button>
-        </div>
       </div>
     </div>
 
-    <div v-else class="loading-state">
-      <div class="spinner"></div>
-      <p>Synchronisation en temps réel avec vos modules GLPI...</p>
+    <div v-else class="kanban-loader-container">
+      <div class="loader-spinner"></div>
+      <p>Synchronisation en temps réel avec la base de données...</p>
     </div>
 
     <TicketCreateModal 
-      v-if="showCreateModal" 
-      @close="showCreateModal = false"
-      @success="handleTicketCreated"
+      v-slot v-if="showCreateModal" 
+      @close="showCreateModal = false" 
+      @created="handleTicketCreated"
     />
 
     <TicketDetailModal 
-      v-if="showDetailModal"
+      v-slot v-if="showDetailModal" 
       @close="showDetailModal = false"
     />
 
     <div v-if="showCostModal" class="modal-overlay" @click.self="cancelResolution">
-      <div class="cost-modal-content">
+      <div class="cost-modal-content animate-pop">
         <div class="cost-modal-header">
-          <h3>🛠️ Résolution du ticket #{{ pendingTicket?.id }}</h3>
+          <h3>💰 Clôture financière : Ticket #{{ pendingTicket?.id }}</h3>
           <button @click="cancelResolution" class="btn-close">&times;</button>
         </div>
-        
         <div class="cost-modal-body">
-          <p>Vous êtes sur le point de marquer ce ticket comme <strong>Résolu</strong>. Veuillez renseigner le coût lié à cette intervention pour les statistiques locales :</p>
-          
+          <p>Le ticket va passer au statut <strong>Résolu</strong>. Veuillez renseigner les frais de maintenance associés pour SQLite :</p>
           <div class="cost-form-group">
-            <label>Libellé du coût</label>
-            <input v-model="costInputName" type="text" placeholder="Ex: Remplacement matériel, Main d'œuvre..." />
+            <label>Libellé de l'intervention</label>
+            <input v-model="costInputName" type="text" placeholder="Ex: Remplacement matériel" />
           </div>
-
           <div class="cost-form-group">
-            <label>Montant du coût</label>
-            <input v-model.number="costInputAmount" type="number" step="0.01" placeholder="0.00" min="0" required autofocus />
+            <label>Montant du coût (€)</label>
+            <input v-model.number="costInputAmount" type="number" step="0.01" placeholder="0.00" autofocus />
           </div>
         </div>
-
         <div class="cost-modal-footer">
           <button @click="cancelResolution" class="btn-cost-cancel">Annuler</button>
-          <button @click="confirmResolutionWithCost" class="btn-cost-confirm">Confirmer & Résoudre</button>
+          <button @click="confirmResolutionWithCost" class="btn-cost-confirm">Enregistrer & Valider</button>
         </div>
       </div>
     </div>
 
-
     <div v-if="showCancelModal" class="modal-overlay" @click.self="cancelAnnulation">
-      <div class="cost-modal-content">
-        <div class="cost-modal-header">
-          <h3>Annulation Tickets #{{ pendingTicket?.id }}</h3>
+      <div class="cost-modal-content animate-pop">
+        <div class="cost-modal-header" style="background-color: #fff7ed; border-bottom: 1px solid #ffedd5;">
+          <h3 style="color: #c2410c;">🔄 Réouverture du Ticket #{{ pendingTicket?.id }}</h3>
+          <button @click="cancelAnnulation" class="btn-close">&times;</button>
         </div>
         
         <div class="cost-modal-body">
-          <p>Annuler un tickets</p>
-        </div>
-          <div class="cost-form-group">
-            <label>Pourcentage Reouverture</label>
-            <input v-model.number="costInputAmount" type="number" step="0.01" placeholder="0.00" min="0" required autofocus />
+          <p>Ce ticket était résolu. Veuillez choisir l'action à réaliser pour son retour à l'état <strong>En cours</strong> :</p>
+          
+          <div class="reopen-box">
+            <label class="reopen-label">Pourcentage appliqué pour la réouverture (%)</label>
+            <div class="reopen-input-wrapper">
+              <input 
+                v-model.number="reopenPercentage" 
+                type="number" 
+                step="1" 
+                placeholder="Ex: 15" 
+                min="0" 
+                class="reopen-field"
+                autofocus
+              />
+              <span class="reopen-unit">%</span>
+            </div>
+            <small class="reopen-hint">Saisissez la valeur (ex: 15 pour ajouter 15% du dernier coût enregistré) avant de cliquer sur Réouverture.</small>
           </div>
-        <div class="cost-modal-footer">
-          <button @click="confirmAnnulation" class="btn-cost-confirm">Confirmer Annulation</button>
-          <button @click="confirmReouverture" class="btn-cost-confirm">Confirmer Reouverture</button>
+        </div>
 
+        <div class="cost-modal-footer dialog-footer-split">
+          <button @click="confirmAnnulation" class="btn-action-delete">
+            ❌ Annulation (Suppr. coût)
+          </button>
+          
+          <button @click="confirmReouverture" class="btn-action-reopen">
+            🚀 Réouverture
+          </button>
         </div>
       </div>
     </div>
-
 
   </div>
 </template>
@@ -143,7 +152,6 @@ import TicketCreateModal from '@/components/front/tickets/TicketCreateModal.vue'
 import TicketDetailModal from '@/components/front/tickets/TicketDetailModal.vue'
 import { useTicketKanban } from '@/composables/locales/useTicketKanban'
 
-// Extraction de toute la logique métier depuis le composable
 const {
   isLoading,
   showCreateModal,
@@ -153,6 +161,7 @@ const {
   searchQuery,
   costInputAmount,
   costInputName,
+  reopenPercentage,
   pendingTicket,
   columnsConfig,
   boardLists,
@@ -163,68 +172,79 @@ const {
   cancelAnnulation,
   handleOpenDetails,
   handleTicketCreated,
-  confirmAnnulation
+  confirmAnnulation,
+  confirmReouverture
 } = useTicketKanban()
 </script>
 
 <style scoped>
-.kanban-page { padding: 30px; background-color: #f1f5f9; min-height: 100vh; font-family: sans-serif; }
-.kanban-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.kanban-header h2 { font-size: 1.8rem; color: #1e293b; margin: 0; font-weight: 700; }
-.subtitle { margin: 4px 0 0 0; font-size: 0.95rem; color: #64748b; }
-.refresh-btn { padding: 10px 18px; background: #1e293b; color: #ffffff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
-.refresh-btn:hover { background: #334155; }
-.search-container { margin-bottom: 25px; max-width: 500px; }
-.search-input { width: 100%; padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem; color: #1e293b; background-color: #ffffff; outline: none; transition: all 0.15s ease-in-out; }
-.search-input:focus { border-color: #1e293b; box-shadow: 0 0 0 3px rgba(30, 41, 59, 0.08); }
-.kanban-board { display: flex; gap: 24px; align-items: flex-start; overflow-x: auto; padding-bottom: 20px; }
-.kanban-column { flex: 1; min-width: 320px; background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; max-height: 80vh; overflow: hidden; }
-.column-header { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-top: 4px solid #ccc; }
-.column-header h3 { margin: 0; font-size: 1.05rem; font-weight: 700; }
-.ticket-count { padding: 2px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; }
-.column-cards-zone { flex: 1; overflow-y: auto; padding: 16px; min-height: 150px; display: flex; flex-direction: column; gap: 14px; }
-.ticket-card { background: #ffffff; padding: 16px; border-radius: 8px; border: 1px solid #f1f5f9; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02); cursor: grab; }
-.ticket-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05); border-color: #e2e8f0; transition: transform 0.15s; }
-.card-header-tags { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.kanban-page { padding: 24px; background-color: #f8fafc; min-height: 100vh; font-family: system-ui, sans-serif; }
+.kanban-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.header-left h2 { margin: 0; font-size: 1.75rem; color: #0f172a; font-weight: 700; }
+.subtitle { margin: 4px 0 0; color: #64748b; font-size: 0.95rem; }
+.header-actions { display: flex; gap: 12px; }
+.create-btn { background-color: #0f172a; color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+.create-btn:hover { background-color: #1e293b; }
+.refresh-btn { background-color: white; border: 1px solid #cbd5e1; color: #334155; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+.refresh-btn:hover:not(:disabled) { background-color: #f1f5f9; }
+
+.search-container { margin-bottom: 24px; }
+.search-input { width: 100%; max-width: 500px; padding: 11px 16px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem; outline: none; transition: border 0.2s; }
+.search-input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+
+.kanban-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; align-items: start; }
+.kanban-column { background-color: #f1f5f9; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; max-height: 80vh; overflow: hidden; }
+.column-header { padding: 14px 16px; border-top: 4px solid #cbd5e1; display: flex; justify-content: space-between; align-items: center; }
+.column-header h3 { margin: 0; font-size: 1rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.ticket-count { padding: 2px 8px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; }
+
+.column-cards-zone { padding: 12px; overflow-y: auto; flex-grow: 1; min-height: 200px; display: flex; flex-direction: column; gap: 12px; }
+.ticket-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: transform 0.15s, box-shadow 0.15s; }
+.ticket-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+.ticket-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .ticket-id { font-size: 0.8rem; font-weight: 700; color: #94a3b8; }
-.priority-tag { padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; background: #e2e8f0; color: #475569; }
-.prio-4, .prio-5 { background: #fee2e2; color: #dc2626; }
-.card-title { margin: 0 0 12px 0; font-size: 0.95rem; color: #334155; font-weight: 600; line-height: 1.5; }
-.card-footer { font-size: 0.8rem; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 10px; }
-.column-footer { padding: 12px 16px; border-top: 1px solid #e2e8f0; background-color: #ffffff; }
-.btn-add-ticket { width: 100%; padding: 10px; background: none; border: 1px dashed #cbd5e1; border-radius: 6px; color: #64748b; font-weight: 600; cursor: pointer; transition: all 0.2s; text-align: center; }
-.btn-add-ticket:hover { background-color: #f1f5f9; color: #1e293b; border-color: #94a3b8; }
-.ghost-card { opacity: 0.3; background-color: #cbd5e1 !important; border: 2px dashed #94a3b8 !important; box-shadow: none !important; }
-.loading-state { text-align: center; padding: 60px 0; color: #64748b; }
-.spinner { width: 45px; height: 45px; border: 4px solid #e2e8f0; border-top-color: #1e293b; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px auto; }
+.ticket-priority { font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+.priority-5 { background: #fef2f2; color: #ef4444; }
+.priority-3 { background: #fffbeb; color: #d97706; }
+.ticket-title { font-size: 0.95rem; color: #1e293b; font-weight: 600; line-height: 1.4; margin-bottom: 10px; word-break: break-word; }
+.ticket-card-footer { font-size: 0.75rem; color: #64748b; }
+
+.kanban-loader-container { text-center: center; padding: 60px 0; color: #64748b; }
+.loader-spinner { width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top-color: #0f172a; border-radius: 50%; margin: 0 auto 16px; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Modale de gestion des coûts locaux */
-.modal-overlay { 
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-  background-color: rgba(15, 23, 42, 0.45); backdrop-filter: blur(4px); 
-  display: flex; justify-content: center; align-items: center; z-index: 1000; 
-}
-.cost-modal-content {
-  background: white; width: 100%; max-width: 450px; border-radius: 10px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15); display: flex; flex-direction: column;
-  overflow: hidden; animation: popUp 0.2s ease-out;
-}
-@keyframes popUp { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-.cost-modal-header {
-  padding: 16px 20px; background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;
-  display: flex; justify-content: space-between; align-items: center;
-}
+/* Modales */
+.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.6); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 16px; backdrop-filter: blur(2px); }
+.cost-modal-content { background: white; border-radius: 12px; width: 100%; max-width: 520px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); overflow: hidden; }
+.animate-pop { animation: pop 0.2s ease-out; }
+@keyframes pop { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.cost-modal-header { padding: 16px 20px; background-color: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
 .cost-modal-header h3 { margin: 0; font-size: 1.1rem; color: #0f172a; }
 .btn-close { background: none; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer; }
 .cost-modal-body { padding: 20px; color: #475569; font-size: 0.95rem; line-height: 1.5; }
-.cost-form-group { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+.cost-form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
 .cost-form-group label { font-size: 0.8rem; font-weight: 700; color: #64748b; text-transform: uppercase; }
 .cost-form-group input { padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 1rem; outline: none; color: #1e293b; }
-.cost-form-group input:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); }
-.cost-modal-footer { padding: 14px 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px; background-color: #f8fafc; }
-.btn-cost-cancel { padding: 9px 16px; background: #e2e8f0; border: none; border-radius: 6px; font-weight: 600; color: #475569; cursor: pointer; }
-.btn-cost-cancel:hover { background: #cbd5e1; }
-.btn-cost-confirm { padding: 9px 16px; background: #10b981; border: none; border-radius: 6px; font-weight: 600; color: white; cursor: pointer; }
+.cost-form-group input:focus { border-color: #10b981; }
+
+/* Styles spécifiques Réouverture */
+.reopen-box { background: #fef8f2; border: 1px solid #ffedd5; padding: 16px; border-radius: 8px; margin-top: 10px; }
+.reopen-label { font-size: 0.85rem; font-weight: 700; color: #c2410c; display: block; margin-bottom: 6px; text-transform: uppercase; }
+.reopen-input-wrapper { display: flex; align-items: center; position: relative; max-width: 160px; }
+.reopen-field { width: 100%; padding: 10px 35px 10px 12px; border: 1px solid #fdba74; border-radius: 6px; font-size: 1.1rem; font-weight: bold; text-align: center; color: #9a3412; outline: none; }
+.reopen-field:focus { border-color: #ea580c; box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.15); }
+.reopen-unit { position: absolute; right: 12px; font-weight: bold; color: #9a3412; }
+.reopen-hint { display: block; font-size: 0.78rem; color: #7c2d12; margin-top: 8px; line-height: 1.3; }
+
+.cost-modal-footer { padding: 14px 20px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 12px; }
+.dialog-footer-split { justify-content: space-between !important; align-items: center; }
+
+.btn-cost-cancel { background: white; border: 1px solid #cbd5e1; padding: 9px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; color: #475569; }
+.btn-cost-confirm { background: #10b981; color: white; border: none; padding: 9px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; }
 .btn-cost-confirm:hover { background: #059669; }
+
+.btn-action-delete { background-color: #ef4444; color: white; border: none; padding: 10px 14px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+.btn-action-delete:hover { background-color: #dc2626; }
+.btn-action-reopen { background-color: #3b82f6; color: white; border: none; padding: 10px 18px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+.btn-action-reopen:hover { background-color: #2563eb; }
 </style>

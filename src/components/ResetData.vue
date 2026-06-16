@@ -1,7 +1,7 @@
 <template>
   <div class="danger-zone">
     <h3>⚠️ Zone de Danger - Administration API Directe</h3>
-    <p>Cette action videra l'intégralité des données importées (Coûts, Tickets, Éléments du Parc Multi-modules) directement depuis ton navigateur.</p>
+    <p>Cette action videra l'intégralité des données de GLPI et SQLite.</p>
     
     <div class="reset-box">
       <button 
@@ -17,7 +17,8 @@
 
 <script setup>
 import { ref } from 'vue'
-import api from '@/services/api' // 🔌 Instance Axios configurée
+import axios from 'axios'        // 👈 AJOUTEZ CETTE LIGNE ICI POUR FIXER L'ERREUR
+import api from '@/services/api'  // 🔌 Instance Axios configurée pour GLPI (/api-glpi)
 import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()
@@ -48,7 +49,6 @@ const clearGlpiModule = async (endpoint) => {
 
     // 2. On boucle et on purge définitivement
     for (const item of items) {
-      // force_purge=true supprime sans passer par la corbeille GLPI
       await api.delete(`/${endpoint}/${item.id}`, {
         params: {
           'force_purge': true
@@ -57,39 +57,21 @@ const clearGlpiModule = async (endpoint) => {
       console.log(`✅ [${endpoint}] ID ${item.id} supprimé de la base.`)
     }
   } catch (error) {
-    // On capture les erreurs pour éviter de bloquer la suite de la boucle des modules
     console.error(`⚠️ Impossible de nettoyer entièrement le module : ${endpoint}`, error)
   }
 }
 
-/**
- * 🚀 Fonction principale déclenchée par le bouton
- */
 const handleDirectGlpiReset = async () => {
-  // Vérification de sécurité de la session
-  if (!authStore.isAuthenticated || !authStore.sessionToken) {
-    alert("Erreur : Tu n'es pas authentifié à GLPI.")
-    return
+  if (!confirm("⚠️ ATTENTION : Cela va supprimer l'intégralité des données de GLPI ET réinitialiser COMPLÈTEMENT votre base SQLite locale (couleurs, traductions et coûts). Continuer ?")) {
+    return;
   }
-
-  const firstCheck = confirm("🚨 ATTENTION ATTENTION ! Tu t'apprêtes à supprimer définitivement TOUTES les données importées des 3 fichiers (Coûts, Tickets, et l'intégralité du Parc Informatique). Continuer ?")
-  if (!firstCheck) return
-
-  const secondCheck = confirm("⚠️ DERNIER AVERTISSEMENT : Cette opération est irréversible et détruira les liaisons en base de données. Es-tu absolument sûr ?")
-  if (!secondCheck) return
 
   isResetting.value = true
 
-  // 📋 Liste ordonnée des modules à nettoyer (De la fin vers le début pour respecter l'intégrité de la BDD)
   const modulesToReset = [
-    // 1. On supprime d'abord le Fichier 3 (Les coûts)
     'TicketCost',
-    
-    // 2. On rompt les liaisons matérielles-tickets du Fichier 2 avant de supprimer les tickets
     'Item_Ticket', 
     'Ticket',
-    
-    // 3. On nettoie TOUS les modules potentiels du Parc du Fichier 1 (S'adapte à ton Item_type)
     'Computer',
     'Monitor',
     'Peripheral',
@@ -97,19 +79,24 @@ const handleDirectGlpiReset = async () => {
   ]
 
   try {
-    // Exécution séquentielle du nettoyage
+    // 1. Purge ordonnée des modules GLPI
     for (const moduleName of modulesToReset) {
       await clearGlpiModule(moduleName)
     }
 
-    alert("🎉 La purge complète et ordonnée de la base GLPI est terminée !");
+    // 2. Purge et reconstruction de la base locale SQLite via Express (port 3005)
+    console.log("⏳ Destruction et reconstruction de la base SQLite...")
+    await axios.post('http://localhost:3005/api/kanban/database/reset-all')
+    console.log("✨ Base SQLite nettoyée et initialisée avec succès.")
+
+    alert("🎉 La purge complète et ordonnée de GLPI et de SQLite est terminée !");
     
     // On recharge la page pour rafraîchir l'affichage global
     window.location.reload()
 
   } catch (error) {
     console.error("La suppression générale a échoué :", error)
-    alert("Une erreur est survenue pendant la purge globale. Vérifie tes privilèges admin GLPI.")
+    alert("Une erreur est survenue pendant la purge globale. Vérifiez les logs des serveurs.")
   } finally {
     isResetting.value = false
   }
