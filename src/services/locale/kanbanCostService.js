@@ -41,12 +41,12 @@ export const kanbanCostService = {
     }
   },
 
-  async reopenTicketCost({ ticketId, percentage }) {
+  async reopenTicketCost({ ticketId, percentage, mode }) {
     try {
       const response = await fetch(`${EXPRESS_BASE_URL}/kanban/costs/reopen`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticket_id: ticketId, percentage })
+        body: JSON.stringify({ ticket_id: ticketId, percentage, mode })
       });
       if (!response.ok) throw new Error('Erreur lors de l\'enregistrement du coût de réouverture');
       return await response.json();
@@ -55,4 +55,65 @@ export const kanbanCostService = {
       throw error;
     }
   }
+
+  // async Costmod1({ ticketId}) {
+  //   try {
+  //     const response = await fetch(`${EXPRESS_BASE_URL}/kanban/costs/mod1`, {
+  //       method: 'GET',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({ ticket_id: ticketId})
+  //     });
+  //     if (!response.ok) throw new Error('Erreur lors de l\'enregistrement du coût de réouverture');
+  //     return await response.json();
+  //   } catch (error) {
+  //     console.error("❌ Erreur [reopenTicketCost]:", error);
+  //     throw error;
+  //   }
+  // },
+
+  //   async Costmod2({ ticketId}) {
+  //   try {
+  //     const response = await fetch(`${EXPRESS_BASE_URL}/kanban/costs/mod2`, {
+  //       method: 'GET',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({ ticket_id: ticketId})
+  //     });
+  //     if (!response.ok) throw new Error('Erreur lors de l\'enregistrement du coût de réouverture');
+  //     return await response.json();
+  //   } catch (error) {
+  //     console.error("❌ Erreur [reopenTicketCost]:", error);
+  //     throw error;
+  //   }
+  // },
+
+  //   async Costmod3({ ticketId}) {
+  //   try {
+  //     const response = await fetch(`${EXPRESS_BASE_URL}/kanban/costs/mod3`, {
+  //       method: 'GET',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({ ticket_id: ticketId})
+  //     });
+  //     if (!response.ok) throw new Error('Erreur lors de l\'enregistrement du coût de réouverture');
+  //     return await response.json();
+  //   } catch (error) {
+  //     console.error("❌ Erreur [reopenTicketCost]:", error);
+  //     throw error;
+  //   }
+  // },
+
+  //   async Costmod4({ ticketId}) {
+  //   try {
+  //     const response = await fetch(`${EXPRESS_BASE_URL}/kanban/costs/mod4`, {
+  //       method: 'GET',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({ ticket_id: ticketId})
+  //     });
+  //     if (!response.ok) throw new Error('Erreur lors de l\'enregistrement du coût de réouverture');
+  //     return await response.json();
+  //   } catch (error) {
+  //     console.error("❌ Erreur [reopenTicketCost]:", error);
+  //     throw error;
+  //   }
+  // }
+
 };

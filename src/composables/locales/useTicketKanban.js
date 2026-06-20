@@ -11,6 +11,7 @@ export function useTicketKanban() {
   const showCostModal = ref(false);
   const showCancelModal = ref(false);
   const searchQuery = ref('');
+  const costMod = ref('');
 
   const costInputAmount = ref(null);
   const costInputName = ref('Frais de résolution / Maintenance');
@@ -142,7 +143,8 @@ export function useTicketKanban() {
       const ticketId = pendingTicket.value.id;
       await kanbanCostService.reopenTicketCost({
         ticketId: ticketId,
-        percentage: parseFloat(reopenPercentage.value)
+        percentage: parseFloat(reopenPercentage.value),
+        mode: costMod.value
       });
       await updateTicketStatus(ticketId, 2);
       pendingTicket.value.status = 2;
@@ -157,6 +159,7 @@ export function useTicketKanban() {
     }
   };
 
+
   const cancelResolution = () => { showCostModal.value = false; pendingTicket.value = null; refreshBoard(); };
   const cancelAnnulation = () => { showCancelModal.value = false; pendingTicket.value = null; refreshBoard(); };
   const handleOpenDetails = async (ticket) => { showDetailModal.value = true; await selectTicket(ticket); };
@@ -167,7 +170,7 @@ export function useTicketKanban() {
   return {
     isLoading, showCreateModal, showDetailModal, showCostModal, showCancelModal,
     searchQuery, costInputAmount, costInputName, reopenPercentage, pendingTicket,
-    columnsConfig, boardLists, refreshBoard, handleCardMove, confirmResolutionWithCost,
+    columnsConfig, boardLists, costMod, refreshBoard, handleCardMove, confirmResolutionWithCost,
     cancelResolution, cancelAnnulation, handleOpenDetails, handleTicketCreated,
     confirmAnnulation, confirmReouverture
   };

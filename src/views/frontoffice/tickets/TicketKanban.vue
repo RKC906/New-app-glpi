@@ -127,6 +127,15 @@
               />
               <span class="reopen-unit">%</span>
             </div>
+             <div>
+              <label>Mode</label>
+              <select v-model="costMod">
+                  <option value="1">mode1</option>
+                  <option value="2">mode2</option>
+                  <option value="3">mode3</option>
+                  <option value="4">mode4</option>
+              </select>
+            </div>
             <small class="reopen-hint">Saisissez la valeur (ex: 15 pour ajouter 15% du dernier coût enregistré) avant de cliquer sur Réouverture.</small>
           </div>
         </div>
@@ -151,6 +160,7 @@ import draggable from 'vuedraggable'
 import TicketCreateModal from '@/components/front/tickets/TicketCreateModal.vue'
 import TicketDetailModal from '@/components/front/tickets/TicketDetailModal.vue'
 import { useTicketKanban } from '@/composables/locales/useTicketKanban'
+import { useAssetStats } from '@/composables/locales/useAssetStats'
 
 const {
   isLoading,
@@ -165,6 +175,7 @@ const {
   pendingTicket,
   columnsConfig,
   boardLists,
+  costMod,
   refreshBoard,
   handleCardMove,
   confirmResolutionWithCost,
@@ -175,6 +186,7 @@ const {
   confirmAnnulation,
   confirmReouverture
 } = useTicketKanban()
+
 </script>
 
 <style scoped>

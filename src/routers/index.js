@@ -77,6 +77,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/front-/importmanual',
+      name: 'importmanual',
+      component: () => import('@/views/backoffice/ImportConfig.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/back/computers',
       name: 'computers',
       component: () => import('@/views/backoffice/computer/ComputerList.vue'),

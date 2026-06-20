@@ -7,6 +7,7 @@ export function useAssetStats() {
   const categoriesReport = ref([]);
   const loading = ref(false);
   const errorMsg = ref(null);
+  const costMod = ref(''); // Servira de filtre dynamique ('', '1', '2', '3', '4')
 
   const typeMapping = {
     Computer: 'Ordinateurs',
@@ -24,6 +25,7 @@ export function useAssetStats() {
     const tempMap = new Map();
 
     try {
+      // 1. Un seul appel API local suffit pour centraliser l'historique SQLite
       const localRes = await axios.get('http://localhost:3005/api/kanban/costs/all');
       const localCosts = localRes.data || [];
       const allTickets = await dashboardService.getTicketsList();
@@ -43,15 +45,28 @@ export function useAssetStats() {
           return sum + fixed + material + timeCost;
         }, 0);
 
+        // 2. Remplacement de const par LET pour permettre l'assignation légitime
+        let ticketSqliteRegular = 0;
+        let ticketSqliteReopen = 0;
+
+        // On isole d'abord les lignes de coûts propres à CE ticket précis
         const ticketCosts = localCosts.filter(c => String(c.ticket_id) === String(ticket.id));
-        
-        // Filtre normalisé insensible à la casse
-        const ticketSqliteRegular = ticketCosts
+
+        // Calcul des coûts classiques (hors réouverture)
+        ticketSqliteRegular = ticketCosts
           .filter(c => !(c.label || '').toLowerCase().includes('réouverture'))
           .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
 
-        const ticketSqliteReopen = ticketCosts
-          .filter(c => (c.label || '').toLowerCase().includes('réouverture'))
+        // Calcul des surcoûts de réouverture (avec filtrage intelligent du Mode si costMod est défini)
+        ticketSqliteReopen = ticketCosts
+          .filter(c => {
+            const isReopen = (c.label || '').toLowerCase().includes('réouverture');
+            // Si l'utilisateur filtre sur un mode (ex: '3'), on vérifie si le label SQLite généré contient "Mode 3"
+            if (costMod.value && isReopen) {
+              return (c.label || '').includes(`Mode ${costMod.value}`);
+            }
+            return isReopen;
+          })
           .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
 
         const itemCount = links.length;
@@ -100,5 +115,5 @@ export function useAssetStats() {
   };
 
   onMounted(buildReport);
-  return { categoriesReport, loading, errorMsg, refreshStats: buildReport };
+  return { categoriesReport, loading, errorMsg, costMod, refreshStats: buildReport };
 }

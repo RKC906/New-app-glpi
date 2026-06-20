@@ -328,6 +328,8 @@ async ImportmvtTickets(csvRow) {
   const csvRef = String(csvRow.ticket || csvRow.tickets || '').trim();
   if (!csvRef) return;
 
+// Si le mode n'est pas précisé dans le CSV, on force par défaut la chaîne '1'
+  const csvMode = String(csvRow.mode || csvRow.mod || '1').trim();
   console.log(`🔍 Traitement de la ligne du mouvement - Réf CSV: ${csvRef}`);
 
   // 1. On récupère la liste des tickets présents dans GLPI
@@ -380,11 +382,12 @@ async ImportmvtTickets(csvRow) {
     id: realGlpiId,
     percentage: cleanvaleur,
     amount: cleanvaleur,
-    valeur: cleanvaleur
+    valeur: cleanvaleur,
+    mode: csvMode
   };
 
   if (rawmvt === 'open') {
-    console.log(`🔄 Envoi réouverture pour le ticket GLPI #${realGlpiId}`, bulletproofPayload);
+    console.log(`🔄 Envoi réouverture pour m ticket GLPI #${realGlpiId}`, bulletproofPayload);
     return await kanbanCostService.reopenTicketCost(bulletproofPayload);
   }    
   else if (rawmvt === 'cancel') {

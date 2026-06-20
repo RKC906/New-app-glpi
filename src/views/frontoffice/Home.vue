@@ -14,6 +14,12 @@
           <button class="btn-secondary">Voir le couts par Assets</button>
       </RouterLink>
     </div>
+    <div>
+      <RouterLink :to="{ name: 'importmanual' }">
+        <button class="btn-dashboard">Page Import Manuel de Cout</button>
+      </RouterLink>
+
+    </div>
     
   <div class="inventory-container">
     <div class="inventory-header">

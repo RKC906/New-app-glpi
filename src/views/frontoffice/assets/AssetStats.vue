@@ -1,15 +1,25 @@
 <template>
   <div class="container py-4">
     
-    <div class="card shadow-sm border-0 mb-4 bg-dark text-white p-4 rounded-3">
+<div class="card shadow-sm border-0 mb-4 bg-dark text-white p-4 rounded-3">
       <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
         <div>
           <h2 class="fw-bold m-0">Rentabilité & Coûts par Catégories</h2>
           <p class="text-muted m-0 mt-1 small text-light-50">Analyse croisée des indicateurs financiers GLPI et des surcoûts locaux SQLite</p>
         </div>
-        <button class="btn btn-outline-light btn-sm px-3" @click="refreshStats" :disabled="loading">
-          🔄 {{ loading ? 'Recalcul...' : 'Actualiser' }}
-        </button>
+        <div class="d-flex align-items-center gap-2">
+          <select v-model="costMod" @change="refreshStats" class="form-select form-select-sm border-secondary text-white bg-secondary bg-opacity-25" style="width: auto; min-width: 200px;">
+            <option value="" class="text-dark">Tous les surcoûts cumulés</option>
+            <option value="1" class="text-dark">Mode 1 - Dernier coût</option>
+            <option value="2" class="text-dark">Mode 2 - Premier coût</option>
+            <option value="3" class="text-dark">Mode 3 - Moyenne</option>
+            <option value="4" class="text-dark">Mode 4 - Somme globale</option>
+          </select>
+          
+          <button class="btn btn-outline-light btn-sm px-3" @click="refreshStats" :disabled="loading">
+            🔄 {{ loading ? 'Recalcul...' : 'Actualiser' }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -134,7 +144,7 @@ import api from '@/services/api';
 import axios from 'axios'; 
 import { dashboardService } from '@/services/dashboardService';
 
-const { categoriesReport, loading, errorMsg, refreshStats } = useAssetStats();
+const { categoriesReport, loading, errorMsg, costMod, refreshStats } = useAssetStats();
 
 const showModal = ref(false);
 const modalLoading = ref(false);
@@ -152,13 +162,19 @@ const openDetailsModal = async (category) => {
     const localCosts = localRes.data || [];
     
     // FILTRAGE ROBUSTE : On utilise toLowerCase pour éviter les erreurs de casse
+   // FILTRAGE ALIGNÉ SUR LE COMPOSABLE
     const getCosts = (ticketId) => {
       const costs = localCosts.filter(c => String(c.ticket_id) === String(ticketId));
       return {
         regular: costs.filter(c => !(c.label || '').toLowerCase().includes('réouverture'))
                       .reduce((sum, c) => sum + (Number(c.amount) || 0), 0),
-        reopen: costs.filter(c => (c.label || '').toLowerCase().includes('réouverture'))
-                     .reduce((sum, c) => sum + (Number(c.amount) || 0), 0)
+        reopen: costs.filter(c => {
+          const isReopen = (c.label || '').toLowerCase().includes('réouverture');
+          if (costMod.value && isReopen) {
+            return (c.label || '').includes(`Mode ${costMod.value}`);
+          }
+          return isReopen;
+        }).reduce((sum, c) => sum + (Number(c.amount) || 0), 0)
       };
     };
 
