@@ -35,8 +35,16 @@ const router = createRouter({
       name: 'assetstats',
       component: () => import('@/views/frontoffice/assets/AssetStats.vue')
     },
-
-
+    {
+      path: '/front/listecout',
+      name: 'costliste',
+      component: () => import('@/views/frontoffice/costs/ListeCost.vue')
+    },
+    {
+      path: '/front/editcout',
+      name: 'costedit',
+      component: () => import('@/views/frontoffice/costs/EditCost.vue')
+    },
 
 
 

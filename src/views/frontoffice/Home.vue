@@ -18,7 +18,11 @@
       <RouterLink :to="{ name: 'importmanual' }">
         <button class="btn-dashboard">Page Import Manuel de Cout</button>
       </RouterLink>
-
+    </div>
+    <div>
+      <RouterLink :to="{ name: 'costliste' }">
+        <button class="btn-dashboard">Liste des Couts</button>
+      </RouterLink>
     </div>
     
   <div class="inventory-container">

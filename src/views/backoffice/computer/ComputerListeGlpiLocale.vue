@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 // 1. Import des deux composables
 import { useComputers } from '@/composables/useComputer'       // GLPI
 import { useLocalComputers } from '@/composables/locales/useLocalComputers' // SQLite
+import { useCost } from '@/composables/locales/useCost'
 
 const router = useRouter()
 
@@ -22,9 +23,9 @@ const {
   localComputers, 
   isLocalLoading, 
   localError, 
-  fetchLocalComputers, 
-  delLocalComputer 
-} = useLocalComputers()
+  costs,
+  fetchCost
+} = useCost()
 
 // 4. Une seule variable pour la barre de recherche globale
 const searchQuery = ref('')
@@ -32,7 +33,7 @@ const searchQuery = ref('')
 // 5. Chargement en parallèle au montage de la page
 onMounted(() => {
   fetchGlpiComputers()  // Appel API GLPI
-  fetchLocalComputers() // Appel API Express/SQLite
+  fetchCost() // Appel API Express/SQLite
 })
 
 // ========================================================
@@ -45,25 +46,11 @@ const filteredGlpi = computed(() => {
 })
 
 const filteredLocal = computed(() => {
-  if (!searchQuery.value.trim()) return localComputers.value
+  if (!searchQuery.value.trim()) return costs.value
   const query = searchQuery.value.toLowerCase().trim()
-  return localComputers.value.filter(c => c.name?.toLowerCase().includes(query))
+  return costs.value.filter(c => c.name?.toLowerCase().includes(query))
 })
 
-// ========================================================
-// OPTION B : Fusionner les deux listes dans un seul tableau
-// ========================================================
-const allComputersCombined = computed(() => {
-  // On ajoute une étiquette 'source' pour savoir d'où vient le PC dans le tableau
-  const glpiMapped = glpiComputers.value.map(c => ({ ...c, source: 'GLPI' }))
-  const localMapped = localComputers.value.map(c => ({ ...c, source: 'SQLite' }))
-  
-  const combined = [...glpiMapped, ...localMapped]
-  
-  if (!searchQuery.value.trim()) return combined
-  const query = searchQuery.value.toLowerCase().trim()
-  return combined.filter(c => c.name?.toLowerCase().includes(query))
-})
 </script>
 <template>
   <div class="container">

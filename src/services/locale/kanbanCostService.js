@@ -17,14 +17,16 @@ export const kanbanCostService = {
   },
 
   async getAllCosts() {
-    try {
-      const response = await fetch(`${EXPRESS_BASE_URL}/kanban/costs/all`);
-      if (!response.ok) throw new Error('Erreur récupération coûts');
-      return await response.json(); // Retourne [{ ticket_id, amount, label }, ...]
-    } catch (error) {
-      console.error("Erreur service:", error);
-      return [];
-    }
+    // try {
+    //   const response = await fetch(`${EXPRESS_BASE_URL}/kanban/costs/all`);
+    //   if (!response.ok) throw new Error('Erreur récupération coûts');
+    //   return await response.json();
+    // } catch (error) {
+    //   console.error("Erreur service:", error);
+    //   return [];
+    // }
+    const { data } = await fetch('http://localhost:3005/api/kanban/costs/all', { params: { range: '0-100' } })
+    return Array.isArray(data) ? data : []
   },
 
   async cancelCost({ ticketId }) {
@@ -54,66 +56,21 @@ export const kanbanCostService = {
       console.error("❌ Erreur [reopenTicketCost]:", error);
       throw error;
     }
+  },
+
+  async updateCost({ id, amount }) {
+    try {
+      const response = await fetch(`${EXPRESS_BASE_URL}/kanban/costs/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, amount })
+      });
+      if (!response.ok) throw new Error('Erreur lors de modification dans la table de couts');
+      return await response.json();
+    } catch (error) {
+      console.error("❌ Erreur [reopenTicketCost]:", error);
+      throw error;
+    }
   }
-
-  // async Costmod1({ ticketId}) {
-  //   try {
-  //     const response = await fetch(`${EXPRESS_BASE_URL}/kanban/costs/mod1`, {
-  //       method: 'GET',
-  //       headers: { 'Content-Type': 'application/json' },
-  //       body: JSON.stringify({ ticket_id: ticketId})
-  //     });
-  //     if (!response.ok) throw new Error('Erreur lors de l\'enregistrement du coût de réouverture');
-  //     return await response.json();
-  //   } catch (error) {
-  //     console.error("❌ Erreur [reopenTicketCost]:", error);
-  //     throw error;
-  //   }
-  // },
-
-  //   async Costmod2({ ticketId}) {
-  //   try {
-  //     const response = await fetch(`${EXPRESS_BASE_URL}/kanban/costs/mod2`, {
-  //       method: 'GET',
-  //       headers: { 'Content-Type': 'application/json' },
-  //       body: JSON.stringify({ ticket_id: ticketId})
-  //     });
-  //     if (!response.ok) throw new Error('Erreur lors de l\'enregistrement du coût de réouverture');
-  //     return await response.json();
-  //   } catch (error) {
-  //     console.error("❌ Erreur [reopenTicketCost]:", error);
-  //     throw error;
-  //   }
-  // },
-
-  //   async Costmod3({ ticketId}) {
-  //   try {
-  //     const response = await fetch(`${EXPRESS_BASE_URL}/kanban/costs/mod3`, {
-  //       method: 'GET',
-  //       headers: { 'Content-Type': 'application/json' },
-  //       body: JSON.stringify({ ticket_id: ticketId})
-  //     });
-  //     if (!response.ok) throw new Error('Erreur lors de l\'enregistrement du coût de réouverture');
-  //     return await response.json();
-  //   } catch (error) {
-  //     console.error("❌ Erreur [reopenTicketCost]:", error);
-  //     throw error;
-  //   }
-  // },
-
-  //   async Costmod4({ ticketId}) {
-  //   try {
-  //     const response = await fetch(`${EXPRESS_BASE_URL}/kanban/costs/mod4`, {
-  //       method: 'GET',
-  //       headers: { 'Content-Type': 'application/json' },
-  //       body: JSON.stringify({ ticket_id: ticketId})
-  //     });
-  //     if (!response.ok) throw new Error('Erreur lors de l\'enregistrement du coût de réouverture');
-  //     return await response.json();
-  //   } catch (error) {
-  //     console.error("❌ Erreur [reopenTicketCost]:", error);
-  //     throw error;
-  //   }
-  // }
 
 };
